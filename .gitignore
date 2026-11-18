@@ -1,0 +1,17 @@
+# Editors and OS
+.vs/
+.vscode/
+.idea/
+*.user
+.DS_Store
+Thumbs.db
+
+# Scratch output and local test results
+scratch/
+*.log
+*.tmp
+
+# Local Python environment used for syntax checks
+venv/
+.venv/
+__pycache__/

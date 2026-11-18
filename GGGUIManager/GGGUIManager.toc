@@ -1,0 +1,8 @@
+## Interface: 16001
+## Title: GGG UI Manager
+## Notes: Good Girl Gamer UI Manager. A main addon for managing and arranging the game's interface.
+## Author: Kitten
+## Version: 0.1.0
+## SavedVariables: GGGUIManagerDB
+
+Core.lua
