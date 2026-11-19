@@ -32,6 +32,29 @@ local function MergeDefaults(target, source)
     end
 end
 
+ns.MergeDefaults = MergeDefaults
+
+---------------------------------------------------------------------
+-- Shared helpers
+---------------------------------------------------------------------
+-- The pet's mood as 1 (unhappy), 2 (content) or 3 (happy), or nil when the client gives nothing (a pet with no
+-- mood, or no pet). This client has the call in C_PetInfo. The pet's damage bonus is the real effect of its
+-- mood (75% unhappy, 100% content, 125% happy), so it is used first (D-015, HUN-08).
+function ns.GetPetMood()
+    local getHappiness = (C_PetInfo and C_PetInfo.GetPetHappiness) or GetPetHappiness
+    if not getHappiness then return nil end
+    local happiness, damage = getHappiness()
+    damage = tonumber(damage)
+    if damage and damage > 0 then
+        if damage >= 115 then return 3 end
+        if damage >= 90 then return 2 end
+        return 1
+    end
+    happiness = tonumber(happiness)
+    if happiness and happiness >= 1 and happiness <= 3 then return math.floor(happiness) end
+    return nil
+end
+
 -- Brings old saved data up to the current schema. Each step runs once, in order.
 local migrations = {
     -- [2] = function(db) ... end,

@@ -3,8 +3,8 @@
 
 | | |
 |---|---|
-| **Version** | 0.5 (draft) |
-| **Supersedes** | 0.4 |
+| **Version** | 0.6 (draft) |
+| **Supersedes** | 0.5 |
 | **Audience** | LLM-based coding agents and human reviewers |
 | **Platform** | World of Warcraft addon, Lua 5.1, client "WoW Forever" (Interface 16001) |
 | **Addon folder** | `GGGUIManager/` |
@@ -29,6 +29,7 @@ This SDD is applied **one step at a time** (section 10). After every step the hu
 
 | Version | Change | Reason |
 |---|---|---|
+| 0.6 | Second module, Hunter (section 7.2): the HunterKit addon converted into a module, and the old addon removed. SCP-07, SCP-24, sections 1.2, 1.4, 3, 7.2, 10 (steps 3 and 4), 13, HUN-01..10 | The human will not use HunterKit outside the UI manager (D-016) |
 | 0.5 | Cluster keeps the default frames visible until the human turns hiding on: new `hideDefaults` setting, default off. CLU-04, CLU-15, saved data of 7.1, step 2, section 1.2 | The human does not want Blizzard's frames hidden while the cluster is being built (D-012) |
 | 0.4 | First module chosen: Cluster, a replacement player and pet layout at the bottom centre of the screen (section 7.1). SCP-04, SCP-20, SCP-24, SCP-25, sections 1.2, 1.4, 3, 7.1, 10, 13, CLU-01..14 | The human chose the first module. Replacing the default frames is back in scope for this module only (D-010, D-011) |
 | 0.3 | TrackingList removed as the first module. SCP-04, SCP-06, SCP-24, sections 1.2, 1.4, 3, 7.1, 10 (steps 1 to 3), 13, TRK-01..10 | The game hides minimap tooltip text from addons ("secret" strings), so the module's only data source does not work (D-009). The first module is to be chosen |
@@ -50,6 +51,7 @@ The project is built as real software: a written design, numbered requirements, 
 - **SCP-03** Saved data with defaults, a schema version and ordered migrations (section 6).
 - **SCP-04** One first module, **Cluster** (section 7.1): a replacement for the default player frame, pet frame, pet bar, party frames and action bars 1 to 4, laid out as one compact group at the bottom centre of the screen. It is built one piece at a time, starting with the player frame.
 - **SCP-05** A module may declare which classes it is for. The manager starts it only for those classes (MOD-06). This is the first small step toward class templates.
+- **SCP-07** A second module, **Hunter** (section 7.2): the ammo alert, pet alerts and info, dead zone warning and macros from the personal addon HunterKit, for Hunters only. The HunterKit addon is removed.
 - **SCP-06** *(Direction, not a requirement yet.)* The manager will later offer a template system: a base template for all classes and class-specific templates on top of it. Hunter is the first class planned.
 
 ## 1.2 Project decisions
@@ -81,7 +83,7 @@ These are settled by the human.
 3. Frame sizes and the total width of the cluster. Step 2 uses defaults that the human adjusts after seeing them (CLU-03).
 4. Does the cluster show for every class? It does by default. The pet parts only show while there is a pet (CLU-08).
 5. This client hides some values from addons as "secret" values (D-009). Which unit values (health, power, names) can addon code read in and out of combat? Step 2 finds out in the game (CLU-12).
-6. Which of the existing personal addons (BagBuddy, FriendBook, HunterKit, others) should eventually fold into this one as modules, if any?
+6. Which of the remaining personal addons (BagBuddy, FriendBook, others) should eventually fold into this one as modules, if any? HunterKit is done (section 7.2).
 7. Is a licence needed for the repository, and is it public or private?
 
 ---
@@ -120,6 +122,7 @@ These rules apply to every step and every file. They are stated once here and ot
     ├── GGGUIManager.toc
     ├── Core.lua                       (shell: saved data, module registry, slash command)
     └── Modules/
+        ├── Hunter/                    (second module, section 7.2: Hunter.lua, Ammo.lua, Pet.lua, DeadZone.lua, Macros.lua)
         └── Cluster/                   (first module, section 7.1; one file per part, added step by step)
             ├── Cluster.lua            (module registration, container, layout)
             └── PlayerFrame.lua        (added in step 2)
@@ -247,6 +250,34 @@ The first module. It replaces the default player frame, pet frame, pet bar, part
 
 ---
 
+## 7.2 Module: Hunter
+
+The second module. It is the HunterKit addon converted into a module. It is for Hunters only.
+
+- **HUN-01** The module is registered as `Hunter` with `classes = { "HUNTER" }` (MOD-06). Its parts are separate files that add themselves to the module and share its settings and alert helper.
+- **HUN-02** Ammo alert. While a ranged weapon is equipped, the player is warned at three levels: low at `warn` ammo (default 200), critical at `critical` (default 50), and none left or none equipped. The count includes ammo in bags. The first check after login is silent. An alert fires only when the level gets worse.
+- **HUN-03** Pet alerts. The player is told when the pet becomes unhappy and when the pet gains training points to spend. `/ggg hunter pet alerts` turns them on or off.
+- **HUN-04** Pet info. `/ggg hunter pet` prints the pet's name, level, family, happiness and training points to spend.
+- **HUN-05** Dead zone warning. A box says "DEAD ZONE" while the target can be attacked, is inside the game's close range check (about 9.9 yards) and is outside Raptor Strike's range. It checks at most 10 times a second (INV-05). `/ggg hunter deadzone on|off|unlock|lock` turns it on or off and moves it. Its position is saved.
+- **HUN-06** Macros. `/ggg hunter macros` creates or rewrites the character macros HKAttack, HKMend, HKFollow and HKStay. It does nothing in combat. The macro names are kept so macros already on action bars keep working.
+- **HUN-07** Every command is under `/ggg hunter` (CMD-05): `ammo`, `ammo <warn> <critical>`, `pet`, `pet alerts`, `deadzone`, `macros`. The old `/hk` command no longer exists.
+- **HUN-08** Pet happiness comes from the shared helper `ns.GetPetMood()` in `Core.lua`, which uses `C_PetInfo.GetPetHappiness` and the pet's damage bonus (D-015). The Cluster pet frame uses the same helper.
+- **HUN-09** HunterKit's tracking list is not carried over. It depended on reading minimap tooltip text, which the client hides from addons (D-009).
+- **HUN-10** The HunterKit addon is removed from `Interface\AddOns` once this module is in place. A backup copy is kept outside the game folder. The saved data of HunterKit (`HunterKitDB`) is not migrated, because the defaults are the same as the module's.
+
+**Saved data** (`ns.db.modules.Hunter`):
+
+```text
+{ enabled = true,
+  ammo = { warn = 200, critical = 50 },
+  pet = { alerts = true },
+  deadzone = { enabled = true, point = { "CENTER", "UIParent", "CENTER", 0, 160 } } }
+```
+
+**Known limitations.** Pet training points use `GetPetTrainingPoints`, which may not exist on this client. When it is missing, that alert and that line of `/ggg hunter pet` are skipped. Check it in the game.
+
+---
+
 # 8. Slash commands
 
 - **CMD-01** `/ggg` and `/gggui` are the only slash commands the addon registers.
@@ -303,9 +334,21 @@ Use these **one at a time**. Each block gives the prompt, the requirements cover
 **Acceptance:** with no errors, the player frame shows in the inner left spot, with the name, a health bar and a power bar that update as they change. The default player frame is still there. Left-click targets you and right-click opens the menu. `/ggg cluster hide on` and a `/reload` hide the default player frame. After `/reload` in combat, nothing errors.
 **Demo:** log in, `/ggg cluster check`, `/reload`, take damage or use an ability that costs power, `/ggg cluster check` in combat, then `/ggg cluster hide on` and `/reload`.
 
-## Step 3 onward
+## Step 3: Pet frame (done)
 
-Not defined in detail. The expected order is the pet frame, the pet bar, the party frames, then action bars 1 to 4, one step each. Each step is written after the previous one has been tested in the game.
+**Covers:** CLU-07, CLU-08. The pet frame at the top of the inner right area, shown only while there is a pet, with the pet's happiness shown as a coloured name and a label. Built on the shared unit frame in `Cluster/UnitFrame.lua`. Confirmed in game.
+
+## Step 4: Hunter module (converted from HunterKit)
+
+**Read:** 2, 5, 7.2, 8.
+**Prompt:** Add `Modules/Hunter/` with `Hunter.lua`, `Ammo.lua`, `Pet.lua`, `DeadZone.lua` and `Macros.lua`, ported from the HunterKit addon. Register the module as `Hunter` for Hunters only. Move the commands from `/hk` to `/ggg hunter`. Use the shared pet mood helper for happiness (HUN-08). Do not port the tracking list (HUN-09). Remove the HunterKit addon from the game folder once the module is in place, after keeping a backup copy outside the game folder (HUN-10).
+**Covers:** HUN-01..10, SCP-07.
+**Acceptance:** the addon loads with no errors on a Hunter and on another class. `/ggg modules` shows Hunter. Each of the five commands works. The HunterKit addon is gone from `Interface\AddOns`.
+**Demo:** see HUN-02 to HUN-07 and the checks in the step report.
+
+## Step 5 onward
+
+Not defined in detail. The expected order is the pet bar, the party frames, then action bars 1 to 4, one step each. Each step is written after the previous one has been tested in the game.
 
 ---
 
@@ -351,7 +394,8 @@ For the shell and for every later feature:
 - A slash sub-command registration helper (MOD-05, CMD-05).
 - Profiles (per character, per spec) layered over `ns.db.modules` without changing module code.
 - A settings window module that reads each module's declared options.
-- Folding existing personal addons in as modules, one at a time, each with a migration of its old saved data.- A template system: a base template for all classes plus class-specific templates (SCP-06), built on the `classes` field (MOD-06).
+- Folding the remaining personal addons (BagBuddy, FriendBook) in as modules, one at a time, each with a migration of its old saved data. HunterKit was folded in as the Hunter module (section 7.2).
+- A template system: a base template for all classes plus class-specific templates (SCP-06), built on the `classes` field (MOD-06).
 - Later, if wanted: a user-movable layout, an edit mode, a grid, third-party wrappers and modules as separate addons (SCP-25). None of these are designed.
 - Splitting Cluster into one module per part if it grows too large (D-011).
 - A packaging step for release if the addon is ever shared (SCP-23).

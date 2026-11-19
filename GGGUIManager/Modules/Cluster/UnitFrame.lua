@@ -91,27 +91,8 @@ function Cluster.CreateUnitFrame(options)
         [3] = { "Happy", 0.2, 0.9, 0.2 },
     }
 
-    -- The pet's damage bonus is the real effect of its mood (75% unhappy, 100% content, 125% happy), so it is
-    -- used first. The plain happiness value is the fallback. nil means the client gives nothing.
-    -- This client has the call in C_PetInfo. The old global name is the fallback for other clients.
-    local getHappiness = (C_PetInfo and C_PetInfo.GetPetHappiness) or GetPetHappiness
-
-    local function ResolveHappiness()
-        if not getHappiness then return nil end
-        local happiness, damage = getHappiness()
-        damage = tonumber(damage)
-        if damage and damage > 0 then
-            if damage >= 115 then return 3 end
-            if damage >= 90 then return 2 end
-            return 1
-        end
-        happiness = tonumber(happiness)
-        if happiness and happiness >= 1 and happiness <= 3 then return math.floor(happiness) end
-        return nil
-    end
-
     local function UpdateHappiness()
-        local happiness = ResolveHappiness()
+        local happiness = ns.GetPetMood()
         local entry = happiness and HAPPINESS[happiness]
         if entry then
             name:SetTextColor(entry[2], entry[3], entry[4])

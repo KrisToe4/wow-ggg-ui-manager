@@ -104,3 +104,10 @@
 - **Decision:** Use `C_PetInfo.GetPetHappiness` (global as fallback). Map the damage bonus to a mood: 115 or more is Happy, 90 or more is Content, below that is Unhappy. Use the plain happiness value if there is no damage bonus. The mood is refreshed by the event and once a second while the pet frame shows.
 - **Alternatives considered:** Reading Blizzard's pet happiness face. Not needed.
 - **Requirement IDs affected:** CLU-07
+
+## D-016 HunterKit becomes the Hunter module and the old addon is removed
+- **Date / step:** 2026-11-19 / SDD 0.6, step 4
+- **Context:** The human will not use HunterKit outside the UI manager. Its parts (ammo, pet, dead zone, macros) are small and fit the module contract.
+- **Decision:** Port them into one module, `Hunter`, for Hunters only, with commands under `/ggg hunter`. Drop the tracking list (D-009). Pet mood uses a shared helper `ns.GetPetMood()` in `Core.lua`, also used by the Cluster pet frame (D-015). Remove the HunterKit addon from the game folder. A backup copy was kept in the session scratchpad. Saved data of HunterKit is not migrated because the defaults are the same.
+- **Alternatives considered:** One module per tool. Rejected as too small to be worth separate modules. Migrating `HunterKitDB`. Rejected because only default values were in use.
+- **Requirement IDs affected:** SCP-07, HUN-01..10

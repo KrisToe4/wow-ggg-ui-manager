@@ -2,7 +2,7 @@
 ## Title: GGG UI Manager
 ## Notes: Good Girl Gamer UI Manager. A main addon for managing and arranging the game's interface.
 ## Author: Kitten
-## Version: 0.3.0
+## Version: 0.4.0
 ## SavedVariables: GGGUIManagerDB
 
 Core.lua
@@ -10,3 +10,8 @@ Modules\Cluster\Cluster.lua
 Modules\Cluster\UnitFrame.lua
 Modules\Cluster\PlayerFrame.lua
 Modules\Cluster\PetFrame.lua
+Modules\Hunter\Hunter.lua
+Modules\Hunter\Ammo.lua
+Modules\Hunter\Pet.lua
+Modules\Hunter\DeadZone.lua
+Modules\Hunter\Macros.lua
