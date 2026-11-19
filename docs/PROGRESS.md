@@ -3,3 +3,9 @@
 | Step | SDD version | Date | Status | Syntax check | In game | Notes |
 |---|---|---|---|---|---|---|
 | 0 | 0.1 | 2026-11-18 | Generated, awaiting in-game check | Passed (luaparser, `Core.lua`) | NOT RUN | Shell, SDD, project files. Initial commit |
+| SDD 0.2 | 0.2 | 2026-11-18 | Drafted, awaiting human review | n/a | n/a | Scope narrowed to the manager and the TrackingList module. Previous version saved as `docs/SDD_v0.1.md`. Steps 1 to 3 defined |
+| SDD 0.3 | 0.3 | 2026-11-19 | Drafted, awaiting human review | n/a | n/a | TrackingList removed (D-009). No first module chosen. Previous version saved as `docs/SDD_v0.2.md`. Only step 1 (manager additions) is defined |
+| SDD 0.4 | 0.4 | 2026-11-19 | Drafted, awaiting human review | n/a | n/a | First module chosen: Cluster (player, pet, pet bar, party, action bars 1 to 4). Previous version saved as `docs/SDD_v0.3.md`. Steps 1 and 2 defined, player frame first |
+| 1 | 0.4 | 2026-11-19 | Done, confirmed in game | Passed (luaparser, `Core.lua`) | Confirmed through step 2: `/ggg cluster` sub-command and the combat queue (reload in combat) work. The class filter is not yet exercised by a module | `ns:RegisterCommand`, `classes` filter, `ns:AfterCombat` queue. Not committed |
+| SDD 0.5 | 0.5 | 2026-11-19 | Drafted, approved by the human | n/a | n/a | Added `hideDefaults` (off by default). Previous version saved as `docs/SDD_v0.4.md` |
+| 2 | 0.5 | 2026-11-19 | Done, confirmed in game | Passed (luaparser, `Core.lua`, `Cluster.lua`, `PlayerFrame.lua`) | Confirmed by the human: frame shows with health and power, left-click targets, right-click opens the menu, `/ggg cluster check` is the same in and out of combat, `hide on` and `off` work after a reload, `/reload` in combat gives no errors | Cluster container, layout boxes, player frame, `/ggg cluster`. Addon linked into the game folder with a junction. Not committed |

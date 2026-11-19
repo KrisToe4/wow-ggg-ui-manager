@@ -77,13 +77,49 @@ function ns:ModuleDB(name)
     return modules[name]
 end
 
+-- True when the module has no `classes` list or the player's class is in it (MOD-06).
+function ns:ModuleIsForThisClass(module)
+    if type(module.classes) ~= "table" then return true end
+    local _, class = UnitClass("player")
+    for _, token in ipairs(module.classes) do
+        if token == class then return true end
+    end
+    return false
+end
+
 local function StartModules()
     for _, name in ipairs(ns.moduleOrder) do
         local module = ns.modules[name]
-        local settings = ns:ModuleDB(name)
-        if Call(module, "Init", settings) and settings.enabled then
-            Call(module, "Enable")
+        if ns:ModuleIsForThisClass(module) then
+            local settings = ns:ModuleDB(name)
+            if Call(module, "Init", settings) and settings.enabled then
+                Call(module, "Enable")
+            end
         end
+    end
+end
+
+---------------------------------------------------------------------
+-- Combat queue (SDD LIF-06, INV-01)
+---------------------------------------------------------------------
+-- Work that must not run in combat is passed to ns:AfterCombat. It runs at once when the player is out of
+-- combat, otherwise when combat ends, in the order it was queued.
+local queue = {}
+
+function ns:AfterCombat(func, ...)
+    if not InCombatLockdown() then
+        func(...)
+        return
+    end
+    queue[#queue + 1] = { func = func, n = select("#", ...), ... }
+end
+
+local function RunQueue()
+    local pending = queue
+    queue = {}
+    for _, item in ipairs(pending) do
+        local ok, err = pcall(item.func, unpack(item, 1, item.n))
+        if not ok then print(ns.PREFIX .. "queued work failed: " .. tostring(err)) end
     end
 end
 
@@ -93,7 +129,12 @@ end
 local events = CreateFrame("Frame")
 events:RegisterEvent("ADDON_LOADED")
 events:RegisterEvent("PLAYER_LOGIN")
+events:RegisterEvent("PLAYER_REGEN_ENABLED")
 events:SetScript("OnEvent", function(self, event, arg1)
+    if event == "PLAYER_REGEN_ENABLED" then
+        RunQueue()
+        return
+    end
     if event == "ADDON_LOADED" then
         if arg1 ~= addonName then return end
         GGGUIManagerDB = GGGUIManagerDB or {}
@@ -112,21 +153,52 @@ end)
 SLASH_GGGUIMANAGER1 = "/ggg"
 SLASH_GGGUIMANAGER2 = "/gggui"
 
+-- Sub-commands added by modules (MOD-05, CMD-05): /ggg <name> <rest of the line>
+local commands = {}
+local commandOrder = {}
+local RESERVED = { help = true, modules = true }
+
+function ns:RegisterCommand(name, handler, helpText)
+    assert(type(name) == "string" and name ~= "" and type(handler) == "function",
+        "GGG UI Manager: bad command registration")
+    name = name:lower()
+    assert(not RESERVED[name] and not commands[name], "GGG UI Manager: duplicate command name " .. name)
+    commands[name] = handler
+    commandOrder[#commandOrder + 1] = { name = name, help = helpText or "" }
+end
+
+local function PrintModules()
+    if #ns.moduleOrder == 0 then
+        print(ns.PREFIX .. "no modules yet.")
+        return
+    end
+    for _, name in ipairs(ns.moduleOrder) do
+        local state
+        if not ns:ModuleIsForThisClass(ns.modules[name]) then
+            state = "not for this class"
+        else
+            state = ns:ModuleDB(name).enabled and "on" or "off"
+        end
+        print(("  %s: %s"):format(name, state))
+    end
+end
+
 SlashCmdList.GGGUIMANAGER = function(msg)
-    msg = (msg or ""):lower():match("^%s*(.-)%s*$")
-    if msg == "" or msg == "help" then
+    msg = (msg or ""):match("^%s*(.-)%s*$")
+    local word, rest = msg:match("^(%S*)%s*(.*)$")
+    word = word:lower()
+    if word == "" or word == "help" then
         print(ns.PREFIX .. "version " .. ns.version)
         print("  /ggg help   show this list")
         print("  /ggg modules   list the loaded modules")
-    elseif msg == "modules" then
-        if #ns.moduleOrder == 0 then
-            print(ns.PREFIX .. "no modules yet.")
-            return
+        for _, command in ipairs(commandOrder) do
+            print(("  /ggg %s   %s"):format(command.name, command.help))
         end
-        for _, name in ipairs(ns.moduleOrder) do
-            local enabled = ns:ModuleDB(name).enabled
-            print(("  %s: %s"):format(name, enabled and "on" or "off"))
-        end
+    elseif word == "modules" then
+        PrintModules()
+    elseif commands[word] then
+        local ok, err = pcall(commands[word], rest)
+        if not ok then print(ns.PREFIX .. ("command %s failed: %s"):format(word, tostring(err))) end
     else
         print(ns.PREFIX .. "unknown command. Try /ggg help")
     end

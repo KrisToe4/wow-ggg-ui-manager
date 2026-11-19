@@ -6,7 +6,7 @@ The addon is a small shell with a module system. Features are added one module a
 
 ## Status
 
-Version 0.1.0. The shell loads, owns the saved data and answers `/ggg`. There are no feature modules yet. The product requirements are still to be written (see section 1.4 of the design document).
+Version 0.2.0. The shell loads, owns the saved data and answers `/ggg`. The first module, Cluster, adds a player frame in a compact layout at the bottom centre of the screen. Blizzard's own frames stay visible unless you turn hiding on.
 
 ## Documents
 
@@ -33,14 +33,18 @@ To remove the link later, delete the `GGGUIManager` entry in the AddOns folder. 
 |---|---|
 | `/ggg` or `/gggui` | Show the version and the command list |
 | `/ggg modules` | List the registered modules and whether each is on |
+| `/ggg cluster check` | Report which unit values the game hides from the addon (run it in and out of combat) |
+| `/ggg cluster hide on` or `off` | Hide or show Blizzard's default frames after a reload (off by default) |
+| `/ggg cluster layout on` or `off` | Show or hide the dark boxes that mark the layout areas |
 
 ## Check that it works
 
 1. Start the game and log in. No error pop-ups should appear.
 2. Type `/ggg`. You should see the version and the help list.
-3. Type `/ggg modules`. You should see "no modules yet."
-4. Type `/reload`. Again, no errors.
-5. Log out. `GGGUIManagerDB` should now exist in `WTF\Account\<account>\SavedVariables\GGGUIManager.lua`.
+3. Type `/ggg modules`. You should see "Cluster: on".
+4. The player frame appears at the bottom centre, left of the middle, inside a dark layout box.
+5. Type `/reload`. Again, no errors.
+6. Log out. `GGGUIManagerDB` should now exist in `WTF\Account\<account>\SavedVariables\GGGUIManager.lua`.
 
 ## Working on it
 
