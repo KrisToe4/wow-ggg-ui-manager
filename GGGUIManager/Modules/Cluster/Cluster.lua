@@ -170,6 +170,36 @@ ns:RegisterCommand("cluster", function(rest)
     local word, arg = rest:lower():match("^(%S*)%s*(%S*)$")
     if word == "check" then
         RunCheck()
+    elseif word == "pet" then
+        print(ns.PREFIX .. "pet happiness search, pet exists: " .. tostring(UnitExists("pet")))
+        local found = {}
+        for key, value in pairs(_G) do
+            if type(key) == "string" and key:lower():find("happi") then
+                found[#found + 1] = key .. " (" .. type(value) .. ")"
+            end
+        end
+        for _, tableName in ipairs({ "C_PetInfo", "C_Pet", "C_StableInfo", "C_UnitAuras" }) do
+            local t = _G[tableName]
+            if type(t) == "table" then
+                for key in pairs(t) do
+                    if type(key) == "string" and (key:lower():find("happi") or key:lower():find("mood")) then
+                        found[#found + 1] = tableName .. "." .. key
+                    end
+                end
+            end
+        end
+        table.sort(found)
+        print("  names with 'happi': " .. (#found > 0 and table.concat(found, ", ") or "none"))
+        local face = _G.PetFrameHappiness
+        print(("  PetFrameHappiness: exists=%s shown=%s tooltip=%s"):format(tostring(face ~= nil),
+            tostring(face and face.IsShown and face:IsShown()), tostring(face and face.tooltip)))
+        print("  UnitHappiness: " .. tostring(_G.UnitHappiness) .. ", GetPetLoyalty: " .. tostring(_G.GetPetLoyalty))
+        local api = (C_PetInfo and C_PetInfo.GetPetHappiness) or GetPetHappiness
+        if api then
+            local happiness, damage, loyalty = api()
+            print(("  GetPetHappiness returns: happiness=%s damage=%s loyalty=%s"):format(
+                tostring(happiness), tostring(damage), tostring(loyalty)))
+        end
     elseif word == "hide" and OnOff(arg) ~= nil then
         settings.hideDefaults = OnOff(arg)
         print(ns.PREFIX .. (settings.hideDefaults
@@ -179,8 +209,8 @@ ns:RegisterCommand("cluster", function(rest)
         settings.showLayout = OnOff(arg)
         ApplyPlaceholders()
     else
-        print(ns.PREFIX .. "usage: /ggg cluster check | hide on|off | layout on|off")
+        print(ns.PREFIX .. "usage: /ggg cluster check | pet | hide on|off | layout on|off")
         print(("  default frames hidden: %s, layout boxes: %s"):format(
             settings.hideDefaults and "yes" or "no", settings.showLayout and "shown" or "hidden"))
     end
-end, "check | hide on|off | layout on|off")
+end, "check | pet | hide on|off | layout on|off")

@@ -90,3 +90,17 @@
 - **Decision:** The player frame passes these values directly to the bars and `SetFormattedText` and never compares or calculates with them. `/ggg cluster check` reports which reads are secret on the real client.
 - **Alternatives considered:** Calculating percentages in Lua, which fails on secret values.
 - **Requirement IDs affected:** CLU-12
+
+## D-014 One shared unit frame builder, and a secure unit watch for the pet
+- **Date / step:** 2026-11-19 / step 3
+- **Context:** The pet frame needs the same name, health and power display as the player frame, and more frames (party) follow.
+- **Decision:** `Cluster/UnitFrame.lua` builds one secure unit frame from options. The player frame was moved onto it. The pet frame uses `RegisterUnitWatch`, so the game shows and hides it securely when the pet appears or goes, even in combat, and it refreshes on `UNIT_PET`.
+- **Alternatives considered:** Copying the player frame code. Rejected because the party frames would make it four copies. Showing and hiding the pet frame from addon code, which is blocked in combat.
+- **Requirement IDs affected:** CLU-07, CLU-08, CLU-13
+
+## D-015 Pet happiness comes from the damage bonus, through C_PetInfo
+- **Date / step:** 2026-11-19 / step 3
+- **Context:** The classic global `GetPetHappiness` does not exist on this client. `C_PetInfo.GetPetHappiness` does and returns happiness, a damage bonus and loyalty. The human's installed Huntmaster addon also prefers the damage bonus as the most reliable signal.
+- **Decision:** Use `C_PetInfo.GetPetHappiness` (global as fallback). Map the damage bonus to a mood: 115 or more is Happy, 90 or more is Content, below that is Unhappy. Use the plain happiness value if there is no damage bonus. The mood is refreshed by the event and once a second while the pet frame shows.
+- **Alternatives considered:** Reading Blizzard's pet happiness face. Not needed.
+- **Requirement IDs affected:** CLU-07
