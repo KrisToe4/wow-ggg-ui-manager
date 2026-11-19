@@ -10,6 +10,7 @@ local Cluster = ns.Cluster
 local TEXTURE = "Interface\\TargetingFrame\\UI-StatusBar"
 local HEALTH_COLOR = { 0.1, 0.75, 0.2 }
 local FRAME_HEIGHT = 62
+Cluster.UNIT_FRAME_HEIGHT = FRAME_HEIGHT -- the pet bar sits under the pet frame
 
 -- options: globalName, unit, container, rect, hideWhenMissing (true for units that may not exist, such as a pet),
 -- happiness (true to show the pet happiness label and colour the name)

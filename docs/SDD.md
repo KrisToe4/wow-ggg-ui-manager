@@ -3,8 +3,8 @@
 
 | | |
 |---|---|
-| **Version** | 0.6 (draft) |
-| **Supersedes** | 0.5 |
+| **Version** | 0.7 (draft) |
+| **Supersedes** | 0.6 |
 | **Audience** | LLM-based coding agents and human reviewers |
 | **Platform** | World of Warcraft addon, Lua 5.1, client "WoW Forever" (Interface 16001) |
 | **Addon folder** | `GGGUIManager/` |
@@ -29,6 +29,7 @@ This SDD is applied **one step at a time** (section 10). After every step the hu
 
 | Version | Change | Reason |
 |---|---|---|
+| 0.7 | Pet bar defined: CLU-09 made specific, CLU-16 added, step 5. Steps after it renumbered | The human asked for the pet bar next |
 | 0.6 | Second module, Hunter (section 7.2): the HunterKit addon converted into a module, and the old addon removed. SCP-07, SCP-24, sections 1.2, 1.4, 3, 7.2, 10 (steps 3 and 4), 13, HUN-01..10 | The human will not use HunterKit outside the UI manager (D-016) |
 | 0.5 | Cluster keeps the default frames visible until the human turns hiding on: new `hideDefaults` setting, default off. CLU-04, CLU-15, saved data of 7.1, step 2, section 1.2 | The human does not want Blizzard's frames hidden while the cluster is being built (D-012) |
 | 0.4 | First module chosen: Cluster, a replacement player and pet layout at the bottom centre of the screen (section 7.1). SCP-04, SCP-20, SCP-24, SCP-25, sections 1.2, 1.4, 3, 7.1, 10, 13, CLU-01..14 | The human chose the first module. Replacing the default frames is back in scope for this module only (D-010, D-011) |
@@ -125,7 +126,8 @@ These rules apply to every step and every file. They are stated once here and ot
         ├── Hunter/                    (second module, section 7.2: Hunter.lua, Ammo.lua, Pet.lua, DeadZone.lua, Macros.lua)
         └── Cluster/                   (first module, section 7.1; one file per part, added step by step)
             ├── Cluster.lua            (module registration, container, layout)
-            └── PlayerFrame.lua        (added in step 2)
+            ├── PlayerFrame.lua        (added in step 2)
+            └── UnitFrame.lua, PetFrame.lua, PetBar.lua   (added in steps 3 and 5)
 ```
 
 The `Cluster/` folder is added in step 2. A `tests/` folder is added at the repository root by the first step that has pure logic (TST-02).
@@ -234,7 +236,8 @@ The first module. It replaces the default player frame, pet frame, pet bar, part
 - **CLU-06** Player frame: the player's name, health and power, built on a secure unit button for `player` so that clicking and the right-click menu work (INV-02). More information is added when the human lists it (section 1.4, question 1).
 - **CLU-07** Pet frame: the same for `pet`. The pet's happiness and other information are added when the human lists them.
 - **CLU-08** The pet frame and the pet bar are shown only while the player has a pet, and the container does not move when they appear or disappear.
-- **CLU-09** Pet bar: the pet's action buttons, built on secure action buttons and placed under the pet frame. Defined in a later step.
+- **CLU-09** Pet bar: the pet's ten action slots, built on secure action buttons of the game's `pet` action type, in one row under the pet frame inside the inner right area. Each button shows the action's icon, its cooldown, a highlight while the action is active (for example the current stance) and a small mark when auto-cast is allowed or on. Left-click uses the action, right-click toggles auto-cast, and hovering shows the game's tooltip for the action.
+- **CLU-16** The pet bar is shown only while the player has a pet, by a secure state driver, so it appears and goes in combat without addon code touching it (INV-01, CLU-13). Empty slots are shown empty. Dragging actions between slots and key bindings on the new buttons are not part of this version. The game's own pet bar key bindings keep working.
 - **CLU-10** Party frames: up to four secure unit buttons for `party1` to `party4`, in a horizontal row. Defined in a later step.
 - **CLU-11** Action bars 1 to 4: secure action buttons bound to the same action slots as Blizzard's bars, so that keybindings, drag and drop and macros keep working. Defined in a later step.
 
@@ -346,9 +349,18 @@ Use these **one at a time**. Each block gives the prompt, the requirements cover
 **Acceptance:** the addon loads with no errors on a Hunter and on another class. `/ggg modules` shows Hunter. Each of the five commands works. The HunterKit addon is gone from `Interface\AddOns`.
 **Demo:** see HUN-02 to HUN-07 and the checks in the step report.
 
-## Step 5 onward
+## Step 5: Pet bar
 
-Not defined in detail. The expected order is the pet bar, the party frames, then action bars 1 to 4, one step each. Each step is written after the previous one has been tested in the game.
+**Read:** 2, 7.1 (CLU-09, CLU-13, CLU-16).
+**Status:** generated, awaiting the in-game check.
+**Prompt:** Add `Modules/Cluster/PetBar.lua`. Build ten secure action buttons of the `pet` type in one row under the pet frame, shown only while there is a pet by a secure state driver. Show icon, cooldown, active highlight and an auto-cast mark. Right-click toggles auto-cast and hover shows the game's tooltip. Hide Blizzard's PetActionBar only when `hideDefaults` is on.
+**Covers:** CLU-09, CLU-13, CLU-16.
+**Acceptance:** with a pet out, the bar shows under the pet frame. Left-click makes the pet attack, follow or stay, and changes its stance, including in combat. The bar disappears when the pet is dismissed. No errors, including after `/reload` in combat.
+**Demo:** summon a pet, click each button, dismiss the pet, summon it again in combat if possible.
+
+## Step 6 onward
+
+Not defined in detail. The expected order is the party frames, then action bars 1 to 4, one step each. Each step is written after the previous one has been tested in the game.
 
 ---
 

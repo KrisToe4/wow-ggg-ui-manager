@@ -170,6 +170,19 @@ ns:RegisterCommand("cluster", function(rest)
     local word, arg = rest:lower():match("^(%S*)%s*(%S*)$")
     if word == "check" then
         RunCheck()
+    elseif word == "petbar" then
+        local button = _G.GGGUIManagerClusterPetAction1
+        print(ns.PREFIX .. "pet bar check, pet exists: " .. tostring(UnitExists("pet")))
+        print(("  ActionButtonUseKeyDown cvar: %s"):format(tostring(GetCVar and GetCVar("ActionButtonUseKeyDown"))))
+        if not button then
+            print("  button 1 does not exist.")
+        else
+            print(("  button 1: shown=%s type1=%s action=%s useOnKeyDown=%s"):format(tostring(button:IsShown()),
+                tostring(button:GetAttribute("type1")), tostring(button:GetAttribute("action")),
+                tostring(button:GetAttribute("useOnKeyDown"))))
+            print(("  GetPetActionInfo(1): %s"):format(tostring((GetPetActionInfo(1)))))
+            print(("  PetHasActionBar: %s"):format(tostring(PetHasActionBar and PetHasActionBar())))
+        end
     elseif word == "pet" then
         print(ns.PREFIX .. "pet happiness search, pet exists: " .. tostring(UnitExists("pet")))
         local found = {}
@@ -209,8 +222,8 @@ ns:RegisterCommand("cluster", function(rest)
         settings.showLayout = OnOff(arg)
         ApplyPlaceholders()
     else
-        print(ns.PREFIX .. "usage: /ggg cluster check | pet | hide on|off | layout on|off")
+        print(ns.PREFIX .. "usage: /ggg cluster check | pet | petbar | hide on|off | layout on|off")
         print(("  default frames hidden: %s, layout boxes: %s"):format(
             settings.hideDefaults and "yes" or "no", settings.showLayout and "shown" or "hidden"))
     end
-end, "check | pet | hide on|off | layout on|off")
+end, "check | pet | petbar | hide on|off | layout on|off")

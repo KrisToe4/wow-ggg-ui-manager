@@ -111,3 +111,17 @@
 - **Decision:** Port them into one module, `Hunter`, for Hunters only, with commands under `/ggg hunter`. Drop the tracking list (D-009). Pet mood uses a shared helper `ns.GetPetMood()` in `Core.lua`, also used by the Cluster pet frame (D-015). Remove the HunterKit addon from the game folder. A backup copy was kept in the session scratchpad. Saved data of HunterKit is not migrated because the defaults are the same.
 - **Alternatives considered:** One module per tool. Rejected as too small to be worth separate modules. Migrating `HunterKitDB`. Rejected because only default values were in use.
 - **Requirement IDs affected:** SCP-07, HUN-01..10
+
+## D-017 Pet bar uses the secure pet action type
+- **Date / step:** 2026-11-19 / SDD 0.7, step 5
+- **Context:** Blizzard's pet bar buttons call `CastPetAction` from the game's own secure code. Addon code cannot rely on calling it in combat. The reference `SecureTemplates.lua` shows that `SecureActionButtonTemplate` has a built-in `pet` action type that casts a pet action from an `action` slot attribute.
+- **Decision:** Build the pet bar from ten `SecureActionButtonTemplate` buttons with `type1 = "pet"` and `action = slot`, shown by a secure visibility state driver on `[@pet,exists]`. Right-click auto-cast uses a secure macro (`/petautocasttoggle <ability>`) because `TogglePetAutocast` is protected: an insecure call raised ADDON_ACTION_FORBIDDEN in the game. The macro text is set out of combat through `ns:AfterCombat`. The tooltip runs from an insecure script. Dragging and key bindings on the new buttons are left out.
+- **Alternatives considered:** Copying Blizzard's `PetActionButtonTemplate`, which pulls in the Mainline action bar mixins and calls protected functions from addon code.
+- **Requirement IDs affected:** CLU-09, CLU-13, CLU-16
+
+## D-018 Secure pet buttons ignore the key-down option
+- **Date / step:** 2026-11-19 / step 5
+- **Context:** The secure action button template acts on the press when the game option "cast action keys on key down" is on. The pet bar buttons registered for the release only, so clicks did nothing.
+- **Decision:** Set the attribute `useOnKeyDown = false` on every pet bar button so they act on the mouse release. Confirmed in game.
+- **Alternatives considered:** Registering for both press and release, as Blizzard's action buttons do. Not needed for mouse-only buttons.
+- **Requirement IDs affected:** CLU-09
