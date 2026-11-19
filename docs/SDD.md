@@ -3,8 +3,8 @@
 
 | | |
 |---|---|
-| **Version** | 0.7 (draft) |
-| **Supersedes** | 0.6 |
+| **Version** | 0.8 (draft) |
+| **Supersedes** | 0.7 |
 | **Audience** | LLM-based coding agents and human reviewers |
 | **Platform** | World of Warcraft addon, Lua 5.1, client "WoW Forever" (Interface 16001) |
 | **Addon folder** | `GGGUIManager/` |
@@ -29,6 +29,7 @@ This SDD is applied **one step at a time** (section 10). After every step the hu
 
 | Version | Change | Reason |
 |---|---|---|
+| 0.8 | Action bars defined: CLU-11 made specific, CLU-17 added, CLU-03 and layout sizes updated for 3 by 4 bars, steps 6 and 7, section 1.4 question 2 settled | The human asked for the four action bars next, as 3 columns by 4 rows |
 | 0.7 | Pet bar defined: CLU-09 made specific, CLU-16 added, step 5. Steps after it renumbered | The human asked for the pet bar next |
 | 0.6 | Second module, Hunter (section 7.2): the HunterKit addon converted into a module, and the old addon removed. SCP-07, SCP-24, sections 1.2, 1.4, 3, 7.2, 10 (steps 3 and 4), 13, HUN-01..10 | The human will not use HunterKit outside the UI manager (D-016) |
 | 0.5 | Cluster keeps the default frames visible until the human turns hiding on: new `hideDefaults` setting, default off. CLU-04, CLU-15, saved data of 7.1, step 2, section 1.2 | The human does not want Blizzard's frames hidden while the cluster is being built (D-012) |
@@ -80,7 +81,7 @@ The project is built as real software: a written design, numbered requirements, 
 These are settled by the human.
 
 1. What is "other information" in the player area and the pet area (CLU-06, CLU-07)? Candidates: level, buffs and debuffs, a cast bar, combo or class resources, a portrait. Nothing beyond name, health and power is planned until the human lists it.
-2. How are action bars 1 and 2 arranged on the left, and 3 and 4 on the right? Stacked rows of 12 buttons, or side by side as columns? This does not matter until the action bar step.
+2. *(Settled in 0.8.)* Action bars 1 and 2 sit side by side on the outer left, 3 and 4 side by side on the outer right, each bar 3 columns by 4 rows (CLU-11).
 3. Frame sizes and the total width of the cluster. Step 2 uses defaults that the human adjusts after seeing them (CLU-03).
 4. Does the cluster show for every class? It does by default. The pet parts only show while there is a pet (CLU-08).
 5. This client hides some values from addons as "secret" values (D-009). Which unit values (health, power, names) can addon code read in and out of combat? Step 2 finds out in the game (CLU-12).
@@ -226,7 +227,7 @@ The first module. It replaces the default player frame, pet frame, pet bar, part
 
 - **CLU-01** The module is registered as `Cluster`. It has no `classes` field, so it is for every class (MOD-06).
 - **CLU-02** One container frame holds everything. It is anchored to the bottom centre of `UIParent` and the parts are positioned inside it (section 7.1, layout).
-- **CLU-03** Parts sit in this order from left to right: action bars 1 and 2 (outer left), the player frame and its information (inner left), the pet frame, its information and the pet bar (inner right), action bars 3 and 4 (outer right). Party frames run horizontally, left to right, in a row above the player and pet area. Frame sizes and the cluster width are defaults in one table at the top of the file and are adjusted after the human sees them in the game.
+- **CLU-03** Parts sit in this order from left to right: action bars 1 and 2 side by side (outer left), the player frame and its information (inner left), the pet frame, its information and the pet bar (inner right), action bars 3 and 4 (outer right). Party frames run horizontally, left to right, in a row above the player and pet area. Frame sizes and the cluster width are defaults in one table at the top of the file and are adjusted after the human sees them in the game.
 - **CLU-04** To replace a default frame, the module builds its own and, when `hideDefaults` is on (CLU-15), hides Blizzard's frame. It never edits or re-skins Blizzard's frame. The hide method is recorded as a decision because it must not taint (INV-02).
 - **CLU-15** The setting `hideDefaults` is off by default. While it is off, Blizzard's frames are left alone and the new frames show beside them. `/ggg cluster hide on` and `/ggg cluster hide off` change it. Turning it on hides the default frames, and turning it off restores them only after a reload (MOD-03).
 - **CLU-05** The layout is fixed in this version. There is no edit mode and no user dragging (SCP-25).
@@ -239,7 +240,17 @@ The first module. It replaces the default player frame, pet frame, pet bar, part
 - **CLU-09** Pet bar: the pet's ten action slots, built on secure action buttons of the game's `pet` action type, in one row under the pet frame inside the inner right area. Each button shows the action's icon, its cooldown, a highlight while the action is active (for example the current stance) and a small mark when auto-cast is allowed or on. Left-click uses the action, right-click toggles auto-cast, and hovering shows the game's tooltip for the action.
 - **CLU-16** The pet bar is shown only while the player has a pet, by a secure state driver, so it appears and goes in combat without addon code touching it (INV-01, CLU-13). Empty slots are shown empty. Dragging actions between slots and key bindings on the new buttons are not part of this version. The game's own pet bar key bindings keep working.
 - **CLU-10** Party frames: up to four secure unit buttons for `party1` to `party4`, in a horizontal row. Defined in a later step.
-- **CLU-11** Action bars 1 to 4: secure action buttons bound to the same action slots as Blizzard's bars, so that keybindings, drag and drop and macros keep working. Defined in a later step.
+- **CLU-11** Action bars 1 to 4: secure action buttons of the `action` type bound to the same action slots as Blizzard's bars, so the same abilities and macros show. Each bar is a grid of 3 columns and 4 rows, numbered across and then down:
+
+  ```text
+   1  2  3
+   4  5  6
+   7  8  9
+  10 11 12
+  ```
+
+  The bars sit side by side: bars 1 and 2 on the outer left (bar 1 outermost) and bars 3 and 4 on the outer right (bar 4 outermost). The slots are Blizzard's: bar 1 is slots 1 to 12, bar 2 (the bottom left bar) is 61 to 72, bar 3 (the bottom right bar) is 49 to 60 and bar 4 (the right bar) is 25 to 36. Bar 1 does not page in this version, so it always shows slots 1 to 12 and does not change for forms, stealth, stances or vehicles.
+- **CLU-17** Each action button shows the icon, the cooldown, the item count or charges, the key binding text, the macro name, grey when the action is unusable, red when the target is out of range, and the game's tooltip. Cooldown and count values may be hidden "secret" values in combat, so cooldowns are set from the game's duration object and counts as text without comparing them (CLU-12). Proc glow, equipped and active borders and spell flyouts come in step 7. Key bindings stay on the game's own bar commands, so the keys keep working and the new buttons only show the key text. Dragging actions onto and off the new buttons is not part of this version.
 
 ### Behaviour that applies to every part
 
@@ -358,9 +369,25 @@ Use these **one at a time**. Each block gives the prompt, the requirements cover
 **Acceptance:** with a pet out, the bar shows under the pet frame. Left-click makes the pet attack, follow or stay, and changes its stance, including in combat. The bar disappears when the pet is dismissed. No errors, including after `/reload` in combat.
 **Demo:** summon a pet, click each button, dismiss the pet, summon it again in combat if possible.
 
-## Step 6 onward
+## Step 6: Action bars 1 to 4, core features
 
-Not defined in detail. The expected order is the party frames, then action bars 1 to 4, one step each. Each step is written after the previous one has been tested in the game.
+**Read:** 2, 7.1 (CLU-03, CLU-11, CLU-12, CLU-13, CLU-17).
+**Status:** generated, awaiting the in-game check.
+**Prompt:** Resize the cluster layout for four bars of 3 by 4 buttons and add `Modules/Cluster/ActionBars.lua`. Build the four bars as secure `action` buttons bound to their slots (CLU-11) with the core features of CLU-17: icon, cooldown, count, key text, macro name, unusable and out-of-range colouring, and tooltip. Hide Blizzard's bars only when `hideDefaults` is on. No paging, no proc glow, no borders, no flyouts and no dragging yet.
+**Covers:** CLU-03, CLU-11, CLU-17 (core part).
+**Acceptance:** with the default bars still visible, the four new bars show the same abilities as the default bars in their slots. Clicking uses the ability, including in combat. Cooldowns, counts and colouring update. No errors, including after `/reload` in combat.
+**Demo:** compare each new bar with its default bar, use an ability, watch the cooldown, then `/reload` in combat.
+
+## Step 7: Action bar extras
+
+**Read:** 2, 7.1 (CLU-17).
+**Status:** not started.
+**Prompt:** Add proc glow, the equipped and active borders and spell flyouts to the action buttons.
+**Covers:** CLU-17 (extras).
+
+## Step 8 onward
+
+Not defined in detail. Candidates: the party frames, dragging actions onto the new bars, paging for bar 1, and key bindings on the new buttons. Each step is written after the previous one has been tested in the game.
 
 ---
 

@@ -125,3 +125,10 @@
 - **Decision:** Set the attribute `useOnKeyDown = false` on every pet bar button so they act on the mouse release. Confirmed in game.
 - **Alternatives considered:** Registering for both press and release, as Blizzard's action buttons do. Not needed for mouse-only buttons.
 - **Requirement IDs affected:** CLU-09
+
+## D-019 Action bars use Blizzard's slots, no paging, duration-object cooldowns
+- **Date / step:** 2026-11-19 / SDD 0.8, step 6
+- **Context:** The human wants the four action bars as 3 by 4 grids, with core button features first and no paging for bar 1 yet. The reference source gives the page numbers of the multi bars (right 3, left 4, bottom right 5, bottom left 6, 12 slots a page). The API documentation marks cooldown values as secret when cooldowns are restricted.
+- **Decision:** Bar 1 is slots 1 to 12, bar 2 (bottom left) 61 to 72, bar 3 (bottom right) 49 to 60, bar 4 (right) 25 to 36. Buttons are `SecureActionButtonTemplate` with `type = "action"` and the `action` attribute set to the slot, with no button ID so the template uses the attribute. Cooldowns use `C_ActionBar.GetActionCooldownDuration` and `SetCooldownFromDurationObject` when they exist. Key bindings stay on the game's commands and the buttons only show the key text. The slot numbers are checked in game with `/ggg cluster bars`.
+- **Alternatives considered:** Paging with a secure state driver, left for a later step. Per-button key bindings, left for a later step.
+- **Requirement IDs affected:** CLU-11, CLU-17

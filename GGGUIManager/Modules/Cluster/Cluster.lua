@@ -20,29 +20,35 @@ end
 -- Layout (CLU-03). All sizes are defaults to adjust after seeing them in the game.
 ---------------------------------------------------------------------
 local GAP = 6
-local BAR_W, BAR_H = 180, 60       -- one action bar area
-local UNIT_W = 240                 -- player area, pet area
-local PARTY_H = 40                 -- the party row
-local MAIN_H = BAR_H * 2 + GAP     -- height under the party row
-local OFFSET_Y = 24                -- distance from the bottom of the screen
-
-local CONTAINER_W = BAR_W * 2 + UNIT_W * 2 + GAP * 3
-local CONTAINER_H = PARTY_H + GAP + MAIN_H
+local BUTTON_SIZE, BUTTON_GAP = 32, 2                -- action buttons (CLU-11, CLU-17)
+local BAR_W = 3 * BUTTON_SIZE + 2 * BUTTON_GAP        -- one action bar: 3 columns
+local BAR_H = 4 * BUTTON_SIZE + 3 * BUTTON_GAP        -- and 4 rows
+local UNIT_W = 240                                    -- player area, pet area
+local PARTY_H = 40                                    -- the party row
+local MAIN_H = BAR_H                                  -- height under the party row
+local OFFSET_Y = 24                                   -- distance from the bottom of the screen
 
 -- Rectangles are { x, y, w, h } measured from the container's top left corner, y going down.
-local x_player = BAR_W + GAP
+local x_bar2 = BAR_W + GAP
+local x_player = BAR_W * 2 + GAP * 2
 local x_pet = x_player + UNIT_W + GAP
-local x_right = x_pet + UNIT_W + GAP
+local x_bar3 = x_pet + UNIT_W + GAP
+local x_bar4 = x_bar3 + BAR_W + GAP
 local mainY = PARTY_H + GAP
+
+local CONTAINER_W = x_bar4 + BAR_W
+local CONTAINER_H = PARTY_H + GAP + MAIN_H
+
+Cluster.BUTTON_SIZE, Cluster.BUTTON_GAP = BUTTON_SIZE, BUTTON_GAP
 
 Cluster.areas = {
     party   = { x_player, 0, UNIT_W * 2 + GAP, PARTY_H, "Party frames" },
     bar1    = { 0, mainY, BAR_W, BAR_H, "Action bar 1" },
-    bar2    = { 0, mainY + BAR_H + GAP, BAR_W, BAR_H, "Action bar 2" },
+    bar2    = { x_bar2, mainY, BAR_W, BAR_H, "Action bar 2" },
     player  = { x_player, mainY, UNIT_W, MAIN_H, "Player" },
     pet     = { x_pet, mainY, UNIT_W, MAIN_H, "Pet and pet bar" },
-    bar3    = { x_right, mainY, BAR_W, BAR_H, "Action bar 3" },
-    bar4    = { x_right, mainY + BAR_H + GAP, BAR_W, BAR_H, "Action bar 4" },
+    bar3    = { x_bar3, mainY, BAR_W, BAR_H, "Action bar 3" },
+    bar4    = { x_bar4, mainY, BAR_W, BAR_H, "Action bar 4" },
 }
 
 ---------------------------------------------------------------------
@@ -170,6 +176,8 @@ ns:RegisterCommand("cluster", function(rest)
     local word, arg = rest:lower():match("^(%S*)%s*(%S*)$")
     if word == "check" then
         RunCheck()
+    elseif word == "bars" then
+        Cluster.PrintBarsCheck()
     elseif word == "petbar" then
         local button = _G.GGGUIManagerClusterPetAction1
         print(ns.PREFIX .. "pet bar check, pet exists: " .. tostring(UnitExists("pet")))
@@ -222,8 +230,8 @@ ns:RegisterCommand("cluster", function(rest)
         settings.showLayout = OnOff(arg)
         ApplyPlaceholders()
     else
-        print(ns.PREFIX .. "usage: /ggg cluster check | pet | petbar | hide on|off | layout on|off")
+        print(ns.PREFIX .. "usage: /ggg cluster check | pet | petbar | bars | hide on|off | layout on|off")
         print(("  default frames hidden: %s, layout boxes: %s"):format(
             settings.hideDefaults and "yes" or "no", settings.showLayout and "shown" or "hidden"))
     end
-end, "check | pet | petbar | hide on|off | layout on|off")
+end, "check | pet | petbar | bars | hide on|off | layout on|off")
