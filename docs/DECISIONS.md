@@ -146,3 +146,10 @@
 - **Decision:** Nine bands: melee, dead zone, 10, 15, 20, 25, 30, 35 yards and Max. The yard bands use `C_Item.IsItemInRange` with items of known reach. Melee needs Raptor Strike in range and Auto Shot out of range. Dead zone is inside about 20 yards with Auto Shot refusing. The ammo icon comes from `GetInventoryItemTexture` on the ammo slot. The human confirmed both work in game.
 - **Alternatives considered:** Keeping the interact distance checks. They only give one yes or no step near 10 yards.
 - **Requirement IDs affected:** HUN-11, HUN-12, HUN-13
+
+## D-022 Hunter spell buttons are secure spell buttons that show only known spells
+- **Date / step:** 2026-11-19 / SDD 0.10, step 9
+- **Context:** The human wants buttons to set the Aspect and the Tracking type in the player area, and buttons for the pet actions (Call Pet, Revive Pet, Dismiss Pet, Feed Pet, Mend Pet, Tame Beast, Beast Training, Beast Lore) in the pet area. The player area had only about 20 px of free height left.
+- **Decision:** Each button is a `SecureActionButtonTemplate` with `type = "spell"` and the spell name, so it casts the highest known rank and works in combat. A spell counts as known when the game returns data for its name. Unknown spells are hidden and the rest are packed from the left, only out of combat. The Mend Pet button casts on the pet and is one of three wide 30 px buttons (Call Pet, Mend Pet, Beast Training) in a row under the small pet row so they are easy to click. The Cluster main area grows by 20 px for one player row (aspects from the left, tracking from the right). The pet row sits under the pet bar. The human chose to add Call Pet. `/ggg hunter buttons` lists which names the game finds, because the spell names are unchecked on this client.
+- **Alternatives considered:** Scanning the spellbook for aspects, left out because the names are enough and the scan differs between clients. Putting the rows beside the range widget, which left too little room.
+- **Requirement IDs affected:** CLU-19 (proposed), HUN-15, HUN-16 (proposed)

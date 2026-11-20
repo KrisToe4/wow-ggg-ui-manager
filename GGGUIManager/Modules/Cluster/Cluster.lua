@@ -25,7 +25,8 @@ local BAR_W = 3 * BUTTON_SIZE + 2 * BUTTON_GAP        -- one action bar: 3 colum
 local BAR_H = 4 * BUTTON_SIZE + 3 * BUTTON_GAP        -- and 4 rows
 local UNIT_W = 240                                    -- player area, pet area
 local PARTY_H = 40                                    -- the party row
-local MAIN_H = BAR_H                                  -- height under the party row
+local EXTRA_H = 20                                    -- room under the bars for one more row of 22 px buttons
+local MAIN_H = BAR_H + EXTRA_H                        -- height under the party row
 local OFFSET_Y = 24                                   -- distance from the bottom of the screen
 
 -- Rectangles are { x, y, w, h } measured from the container's top left corner, y going down.
@@ -64,6 +65,8 @@ local function BuildContainer()
     container:SetFrameStrata("LOW")
 
     for name, rect in pairs(Cluster.areas) do
+      -- The party row stays reserved but its placeholder is not drawn until the party frames are built.
+      if name ~= "party" then
         local box = container:CreateTexture(nil, "BACKGROUND")
         box:SetPoint("TOPLEFT", container, "TOPLEFT", rect[1], -rect[2])
         box:SetSize(rect[3], rect[4])
@@ -73,6 +76,7 @@ local function BuildContainer()
         label:SetText(rect[5])
         placeholders[#placeholders + 1] = box
         placeholders[#placeholders + 1] = label
+      end
     end
 end
 

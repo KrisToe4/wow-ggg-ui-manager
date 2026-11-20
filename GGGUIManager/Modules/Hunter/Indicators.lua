@@ -178,6 +178,8 @@ local function Build(container, areas)
     ammoText = ammoFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     ammoText:SetPoint("LEFT", ammoIcon, "RIGHT", 6, 0)
 
+    Hunter.playerWidgetsBottom = y + AMMO_H + WIDGET_GAP + RANGE_H -- where the button rows start (Buttons.lua)
+
     local rangeFrame = CreateFrame("Frame", "GGGUIManagerHunterRange", container)
     rangeFrame:SetPoint("TOPLEFT", container, "TOPLEFT", rect[1], -(y + AMMO_H + WIDGET_GAP))
     rangeFrame:SetSize(width, RANGE_H)
