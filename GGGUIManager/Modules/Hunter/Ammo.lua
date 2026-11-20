@@ -22,6 +22,24 @@ local function Read()
     return ammoID, GetCount(ammoID) or 0
 end
 
+-- The ammo state for the indicator (HUN-11): ammoID (or nil), the total count, the level 0 to 3 and the ranged
+-- weapon's ID (nil when there is no ranged weapon).
+function Ammo.Status()
+    local rangedID = GetInventoryItemID("player", RANGED_SLOT)
+    if not rangedID then return nil, 0, 0, nil end
+    local ammoID, count = Read()
+    local cfg = Hunter.settings.ammo
+    local level = 0
+    if not ammoID or count <= 0 then
+        level = 3
+    elseif count <= cfg.critical then
+        level = 2
+    elseif count <= cfg.warn then
+        level = 1
+    end
+    return ammoID, count, level, rangedID
+end
+
 local function Check()
     if not Hunter.active then return end
     local rangedID = GetInventoryItemID("player", RANGED_SLOT)

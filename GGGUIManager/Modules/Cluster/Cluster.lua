@@ -116,6 +116,17 @@ function Cluster:Init(settings)
     ns:AfterCombat(function() self:Build() end)
 end
 
+-- Other modules place their own widgets in the free space of an area once the container exists (CLU-18).
+local builtCallbacks = {}
+
+function Cluster:OnBuilt(func)
+    if self.built then
+        func(container, self.areas)
+    else
+        builtCallbacks[#builtCallbacks + 1] = func
+    end
+end
+
 function Cluster:Build()
     if container then return end
     BuildContainer()
@@ -126,6 +137,12 @@ function Cluster:Build()
         if not ok then print(ns.PREFIX .. ("Cluster part %s failed: %s"):format(name, tostring(err))) end
     end
     if self.settings.hideDefaults then HideDefaultFrames() end
+    self.built = true
+    for _, func in ipairs(builtCallbacks) do
+        local ok, err = pcall(func, container, self.areas)
+        if not ok then print(ns.PREFIX .. "Cluster callback failed: " .. tostring(err)) end
+    end
+    builtCallbacks = {}
 end
 
 function Cluster:Enable()

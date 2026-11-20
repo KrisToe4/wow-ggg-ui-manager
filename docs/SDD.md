@@ -3,8 +3,8 @@
 
 | | |
 |---|---|
-| **Version** | 0.8 (draft) |
-| **Supersedes** | 0.7 |
+| **Version** | 0.10 (draft) |
+| **Supersedes** | 0.8 |
 | **Audience** | LLM-based coding agents and human reviewers |
 | **Platform** | World of Warcraft addon, Lua 5.1, client "WoW Forever" (Interface 16001) |
 | **Addon folder** | `GGGUIManager/` |
@@ -29,6 +29,8 @@ This SDD is applied **one step at a time** (section 10). After every step the hu
 
 | Version | Change | Reason |
 |---|---|---|
+| 0.10 | Range indicator redesigned: nine bands from item ranges and the Auto Shot rule (HUN-12, HUN-13), ammo icon from the equipped slot (HUN-11) | In the game Raptor Strike reported "in range" at every distance, so melee was always lit. Huntmaster's method (item range ladder plus Auto Shot) worked |
+| 0.9 | Hunter widgets in the player area, as an experiment: CLU-18, HUN-11 to HUN-14, step 8. Party frames postponed | The human wants an ammo indicator and a range indicator in the player area and expects a lot of trial and error |
 | 0.8 | Action bars defined: CLU-11 made specific, CLU-17 added, CLU-03 and layout sizes updated for 3 by 4 bars, steps 6 and 7, section 1.4 question 2 settled | The human asked for the four action bars next, as 3 columns by 4 rows |
 | 0.7 | Pet bar defined: CLU-09 made specific, CLU-16 added, step 5. Steps after it renumbered | The human asked for the pet bar next |
 | 0.6 | Second module, Hunter (section 7.2): the HunterKit addon converted into a module, and the old addon removed. SCP-07, SCP-24, sections 1.2, 1.4, 3, 7.2, 10 (steps 3 and 4), 13, HUN-01..10 | The human will not use HunterKit outside the UI manager (D-016) |
@@ -250,6 +252,7 @@ The first module. It replaces the default player frame, pet frame, pet bar, part
   ```
 
   The bars sit side by side: bars 1 and 2 on the outer left (bar 1 outermost) and bars 3 and 4 on the outer right (bar 4 outermost). The slots are Blizzard's: bar 1 is slots 1 to 12, bar 2 (the bottom left bar) is 61 to 72, bar 3 (the bottom right bar) is 49 to 60 and bar 4 (the right bar) is 25 to 36. Bar 1 does not page in this version, so it always shows slots 1 to 12 and does not change for forms, stealth, stances or vehicles.
+- **CLU-18** Cluster tells other modules when it is built. `Cluster:OnBuilt(func)` calls `func(container, areas)` once the container and the parts exist, or at once if they already do. Other modules use it to place widgets in the free space of an area, for example the Hunter widgets under the player frame (HUN-14). The widgets are not secure frames, so they can change in combat.
 - **CLU-17** Each action button shows the icon, the cooldown, the item count or charges, the key binding text, the macro name, grey when the action is unusable, red when the target is out of range, and the game's tooltip. Cooldown and count values may be hidden "secret" values in combat, so cooldowns are set from the game's duration object and counts as text without comparing them (CLU-12). Proc glow, equipped and active borders and spell flyouts come in step 7. Key bindings stay on the game's own bar commands, so the keys keep working and the new buttons only show the key text. Dragging actions onto and off the new buttons is not part of this version.
 
 ### Behaviour that applies to every part
@@ -278,6 +281,15 @@ The second module. It is the HunterKit addon converted into a module. It is for 
 - **HUN-08** Pet happiness comes from the shared helper `ns.GetPetMood()` in `Core.lua`, which uses `C_PetInfo.GetPetHappiness` and the pet's damage bonus (D-015). The Cluster pet frame uses the same helper.
 - **HUN-09** HunterKit's tracking list is not carried over. It depended on reading minimap tooltip text, which the client hides from addons (D-009).
 - **HUN-10** The HunterKit addon is removed from `Interface\AddOns` once this module is in place. A backup copy is kept outside the game folder. The saved data of HunterKit (`HunterKitDB`) is not migrated, because the defaults are the same as the module's.
+
+### Experimental widgets (step 8)
+
+These are an experiment. How they look and work will change as the human tries them, so the requirements are deliberately loose and the step is repeated until the human is happy (section 10, step 8).
+
+- **HUN-11** Ammo indicator: a small widget in the player area of the Cluster showing the equipped ammo's icon (taken from the equipped slot) and the total count, coloured normal, yellow at the low level and red at the critical level or when none is left (HUN-02). It updates on the same events as the ammo alert. It is shown only for a Hunter with a ranged weapon.
+- **HUN-12** Range indicator: a widget in the player area that shows how far the current target is, in bands that change as the player moves closer or further away. It has nine blocks from near to far: melee (M), dead zone (D), 10, 15, 20, 25, 30 and 35 yards, and the edge of shooting range (Max). The block the target is in is lit and past Max every block is dim. With no attackable target it is dim. The yard bands come from `C_Item.IsItemInRange` with items of known use range. Raptor Strike counts as melee only when Auto Shot is out of range, because Raptor Strike reports "in range" at every distance on this client. The dead zone is shown when the target is inside about 20 yards and Auto Shot refuses to fire. It checks at most 10 times a second (INV-05). The bands and the look are expected to change.
+- **HUN-13** Range probe: `/ggg hunter range` prints every range measurement the client offers for the current target, so the human can stand at different distances and report which measurements change. It lists the interact distance checks, the item range ladder, Raptor Strike and Auto Shot by spell ID, the range of several hunter spells with their minimum and maximum range from the spell data, and the unit distance call if the client has it.
+- **HUN-14** The widgets are placed by the Hunter module inside the Cluster container, in the free space under the player frame (CLU-18). If Cluster is off or not built, the widgets are not shown.
 
 **Saved data** (`ns.db.modules.Hunter`):
 
@@ -385,9 +397,18 @@ Use these **one at a time**. Each block gives the prompt, the requirements cover
 **Prompt:** Add proc glow, the equipped and active borders and spell flyouts to the action buttons.
 **Covers:** CLU-17 (extras).
 
-## Step 8 onward
+## Step 8: Hunter widgets (experiment, repeated)
 
-Not defined in detail. Candidates: the party frames, dragging actions onto the new bars, paging for bar 1, and key bindings on the new buttons. Each step is written after the previous one has been tested in the game.
+**Read:** 2, 7.2 (HUN-11 to HUN-14), 7.1 (CLU-18).
+**Status:** round 1 generated. Round 2 (nine-band range indicator, ammo icon fix) confirmed working by the human in game.
+**Prompt:** Add `Cluster:OnBuilt`. Add `Modules/Hunter/Indicators.lua` with the ammo indicator and the first version of the range indicator in the free space under the player frame, and the `/ggg hunter range` probe. Keep the look simple and easy to change. Each round the human reports what is wrong or missing and the widgets change. Record what the probe shows about the client's range data in `docs/DECISIONS.md`.
+**Covers:** CLU-18, HUN-11 to HUN-14.
+**Acceptance:** with a ranged weapon, the ammo widget shows the ammo icon and count in the player area. With a hostile target, the range widget lights the block that matches the distance and changes when the player or target moves. The probe prints its list. No errors.
+**Demo:** target a mob, walk toward and away from it, run `/ggg hunter range` at a few distances, shoot ammo and watch the count.
+
+## Step 9 onward
+
+Not defined in detail. Candidates: the party frames (postponed by the human until they have a group), dragging actions onto the new bars, paging for bar 1, and key bindings on the new buttons. Each step is written after the previous one has been tested in the game.
 
 ---
 

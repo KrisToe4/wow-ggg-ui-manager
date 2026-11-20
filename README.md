@@ -6,7 +6,7 @@ The addon is a small shell with a module system. Features are added one module a
 
 ## Status
 
-Version 0.6.0. The shell loads, owns the saved data and answers `/ggg`. The first module, Cluster, adds a player frame in a compact layout at the bottom centre of the screen. Blizzard's own frames stay visible unless you turn hiding on.
+Version 0.7.0. The shell loads, owns the saved data and answers `/ggg`. The first module, Cluster, adds a player frame in a compact layout at the bottom centre of the screen. Blizzard's own frames stay visible unless you turn hiding on.
 
 ## Documents
 
@@ -33,7 +33,7 @@ To remove the link later, delete the `GGGUIManager` entry in the AddOns folder. 
 |---|---|
 | `/ggg` or `/gggui` | Show the version and the command list |
 | `/ggg modules` | List the registered modules and whether each is on |
-| `/ggg hunter ammo`, `pet`, `deadzone`, `macros` | Hunter tools (Hunters only). They replace the old HunterKit addon |
+| `/ggg hunter ammo`, `pet`, `deadzone`, `macros`, `range` | Hunter tools (Hunters only). They replace the old HunterKit addon |
 | `/ggg cluster check` | Report which unit values the game hides from the addon (run it in and out of combat) |
 | `/ggg cluster bars` | Print a check of the four action bars (slots, default bar names) |
 | `/ggg cluster hide on` or `off` | Hide or show Blizzard's default frames after a reload (off by default) |

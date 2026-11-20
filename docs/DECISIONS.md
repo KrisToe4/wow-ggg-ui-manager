@@ -132,3 +132,17 @@
 - **Decision:** Bar 1 is slots 1 to 12, bar 2 (bottom left) 61 to 72, bar 3 (bottom right) 49 to 60, bar 4 (right) 25 to 36. Buttons are `SecureActionButtonTemplate` with `type = "action"` and the `action` attribute set to the slot, with no button ID so the template uses the attribute. Cooldowns use `C_ActionBar.GetActionCooldownDuration` and `SetCooldownFromDurationObject` when they exist. Key bindings stay on the game's commands and the buttons only show the key text. The slot numbers are checked in game with `/ggg cluster bars`.
 - **Alternatives considered:** Paging with a secure state driver, left for a later step. Per-button key bindings, left for a later step.
 - **Requirement IDs affected:** CLU-11, CLU-17
+
+## D-020 Hunter widgets are an experiment with a range probe first
+- **Date / step:** 2026-11-19 / SDD 0.9, step 8
+- **Context:** The human wants an ammo indicator and a visual range indicator in the player area and expects a lot of trial and error. The game has no call that returns the exact distance to a hostile target, only yes or no checks (interact distances, spell ranges).
+- **Decision:** Build a first rough version from the checks the client offers: four bands in round 1 (melee from Raptor Strike, dead zone from the 9.9 yard interact check, ranged from Auto Shot, and far). Add `/ggg hunter range` to print every measurement the client gives, so the next iteration can use what really changes with distance. The widgets are placed through the new `Cluster:OnBuilt` hook. Party frames are postponed until the human has a group to test with.
+- **Alternatives considered:** Waiting for exact distances. Not available. Designing the final look first. The human prefers to try and adjust.
+- **Requirement IDs affected:** CLU-18, HUN-11..14
+
+## D-021 Range bands come from item ranges and the Auto Shot rule
+- **Date / step:** 2026-11-19 / SDD 0.10, step 8 round 2
+- **Context:** In the game Raptor Strike reported "in range" at every distance, so the melee band was always lit. The Huntmaster addon already works on this client and uses an item range ladder plus Auto Shot. The ammo icon from the item lookup was also empty.
+- **Decision:** Nine bands: melee, dead zone, 10, 15, 20, 25, 30, 35 yards and Max. The yard bands use `C_Item.IsItemInRange` with items of known reach. Melee needs Raptor Strike in range and Auto Shot out of range. Dead zone is inside about 20 yards with Auto Shot refusing. The ammo icon comes from `GetInventoryItemTexture` on the ammo slot. The human confirmed both work in game.
+- **Alternatives considered:** Keeping the interact distance checks. They only give one yes or no step near 10 yards.
+- **Requirement IDs affected:** HUN-11, HUN-12, HUN-13
