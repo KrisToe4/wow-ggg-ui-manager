@@ -68,10 +68,11 @@ local HELP = {
     "  /ggg hunter deadzone   on, off, unlock or lock the dead zone warning",
     "  /ggg hunter macros   create or update the hunter macros",
     "  /ggg hunter range   print the range measurements for your target (experiment)",
+    "  /ggg hunter cooldowns   check the essential cooldowns frame in the player area",
     "  /ggg hunter buttons   list which aspect, tracking and pet spells the game says you know",
 }
 
-local PART_FOR_WORD = { ammo = "Ammo", pet = "Pet", deadzone = "DeadZone", macros = "Macros", range = "Indicators", buttons = "Buttons" }
+local PART_FOR_WORD = { ammo = "Ammo", pet = "Pet", deadzone = "DeadZone", macros = "Macros", range = "Indicators", buttons = "Buttons", cooldowns = "Cooldowns" }
 
 ns:RegisterCommand("hunter", function(rest)
     if not Hunter.settings then
@@ -86,4 +87,4 @@ ns:RegisterCommand("hunter", function(rest)
     end
     print(ns.PREFIX .. "hunter commands:")
     for _, line in ipairs(HELP) do print(line) end
-end, "ammo | pet | deadzone | macros | range | buttons (hunters only)")
+end, "ammo | pet | deadzone | macros | range | buttons | cooldowns (hunters only)")

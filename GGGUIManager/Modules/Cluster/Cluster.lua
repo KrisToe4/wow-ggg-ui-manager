@@ -93,17 +93,62 @@ end
 -- so this runs through ns:AfterCombat. Nothing of Blizzard's code is edited or replaced (INV-02).
 local graveyard
 
-local function HideDefaultFrames()
+local MANAGER_GETTERS = { "GetPlayerBottomManagedFrameContainer", "GetBottomManagedFrameContainer",
+    "GetRightManagedFrameContainer" }
+
+-- Some default frames (the pet frame, the cooldown viewers) are "managed frames": whenever one is shown,
+-- Blizzard's layout code moves it back out of the hidden frame. So the layout code is told to leave it alone,
+-- it is forgotten by the containers that already have it, and if anything moves it back it is buried again.
+local function Bury(frame)
+    frame:UnregisterAllEvents()
+    frame.ignoreFramePositionManager = true
+    for _, getter in ipairs(MANAGER_GETTERS) do
+        local get = _G[getter]
+        local container = get and get()
+        if container and container.showingFrames then container.showingFrames[frame] = nil end
+    end
+    frame:SetParent(graveyard)
+    if not frame.gggBuried then
+        frame.gggBuried = true
+        hooksecurefunc(frame, "SetParent", function(self, parent)
+            if parent ~= graveyard and Cluster.settings and Cluster.settings.hideDefaults then
+                ns:AfterCombat(function() self:SetParent(graveyard) end)
+            end
+        end)
+    end
+end
+
+local function HideFrames(names)
     graveyard = graveyard or CreateFrame("Frame")
     graveyard:Hide()
-    for _, name in ipairs(Cluster.partOrder) do
-        for _, frameName in ipairs(Cluster.parts[name].defaultFrames or {}) do
-            local frame = _G[frameName]
-            if frame then
-                frame:UnregisterAllEvents()
-                frame:SetParent(graveyard)
-            end
+    for _, frameName in ipairs(names) do
+        local frame = _G[frameName]
+        if frame then
+            local ok, err = pcall(Bury, frame)
+            if not ok then print(ns.PREFIX .. ("could not hide %s: %s"):format(frameName, tostring(err))) end
         end
+    end
+end
+
+-- Default frames that other modules replace, for example the essential cooldowns viewer. The utility cooldowns
+-- viewer is hidden for now and comes into the layout later.
+local extraDefaultFrames = { "UtilityCooldownViewer" }
+
+local function HideDefaultFrames()
+    local names = {}
+    for _, name in ipairs(Cluster.partOrder) do
+        for _, frameName in ipairs(Cluster.parts[name].defaultFrames or {}) do names[#names + 1] = frameName end
+    end
+    for _, frameName in ipairs(extraDefaultFrames) do names[#names + 1] = frameName end
+    HideFrames(names)
+end
+
+-- Another module that replaces a default frame (CLU-15) hands its name here. It is hidden with the others when
+-- hiding is on.
+function Cluster:ReplaceDefaultFrame(frameName)
+    extraDefaultFrames[#extraDefaultFrames + 1] = frameName
+    if self.built and self.settings.hideDefaults then
+        ns:AfterCombat(HideFrames, { frameName })
     end
 end
 

@@ -153,3 +153,24 @@
 - **Decision:** Each button is a `SecureActionButtonTemplate` with `type = "spell"` and the spell name, so it casts the highest known rank and works in combat. A spell counts as known when the game returns data for its name. Unknown spells are hidden and the rest are packed from the left, only out of combat. The Mend Pet button casts on the pet and is one of three wide 30 px buttons (Call Pet, Mend Pet, Beast Training) in a row under the small pet row so they are easy to click. The Cluster main area grows by 20 px for one player row (aspects from the left, tracking from the right). The pet row sits under the pet bar. The human chose to add Call Pet. `/ggg hunter buttons` lists which names the game finds, because the spell names are unchecked on this client.
 - **Alternatives considered:** Scanning the spellbook for aspects, left out because the names are enough and the scan differs between clients. Putting the rows beside the range widget, which left too little room.
 - **Requirement IDs affected:** CLU-19 (proposed), HUN-15, HUN-16 (proposed)
+
+## D-023 The shot timer is a glow over the range bar, driven by Auto Shot events
+- **Date / step:** 2026-11-19 / SDD 0.10, step 10
+- **Context:** The human wants a ranged shot timer in the player area, shown as a glow that sweeps over the range bar from left to right with the shot timing.
+- **Decision:** A status bar glow and a bright edge sit over the range bar. A new cycle starts each time `UNIT_SPELLCAST_SUCCEEDED` reports Auto Shot (spell 75) for the player, and it lasts as long as the ranged speed from `UnitRangedDamage`. The glow is shown only while `START_AUTOREPEAT_SPELL` says Auto Shot is on. Your ranged speed is a secret value, so it only goes to a status bar. Whether the shot is ready is judged from the measured gap between two shots, so the bright edge shows from the second shot on. It is redrawn about 30 times a second while shown, which is the one place a faster tick than 0.1 s is used. Moving, haste changes and the half second wind-up are not modelled yet.
+- **Alternatives considered:** Reading the wind-up from a cast bar event, left for a later round once the basic timing is checked in game.
+- **Requirement IDs affected:** HUN-17 (proposed)
+
+## D-024 The essential cooldowns are our own icon row from the Cooldown Manager's list
+- **Date / step:** 2026-11-19 / SDD 0.10, step 11
+- **Context:** The human wants the Essential Cooldowns frame in the player area, to the right of the ammo icon and count. A first try moved Blizzard's `EssentialCooldownViewer` into a holder. The move was accepted (parent and anchor were ours, the frame was shown with six icons) but the frame and its icons never got a screen position (`GetRect` and `GetCenter` returned nothing), so nothing was drawn. The client appears to hide that frame's geometry from addons.
+- **Decision:** Draw our own row of icons in the holder. The list comes from the Essential Cooldowns frame's `GetCooldownIDs` when it exists, otherwise from `C_CooldownViewer.GetCooldownViewerCategorySet`. Each cooldown ID is turned into a spell with `C_CooldownViewer.GetCooldownViewerCooldownInfo` (the override spell when there is one). Icons show the spell texture, a cooldown swipe through the duration object API and a spell tooltip, and shrink to fit up to ten. Blizzard's own frame is left where it is, so the human can set the Cooldown Manager's visibility to hidden if the duplicate is not wanted. `/ggg hunter cooldowns` prints the list and what each ID resolves to.
+- **Alternatives considered:** Re-anchoring Blizzard's frame in other ways, which could not be diagnosed because its position is hidden. Dropping the feature.
+- **Requirement IDs affected:** HUN-18 (proposed)
+
+## D-025 Managed default frames are told to stay hidden
+- **Date / step:** 2026-11-19 / SDD 0.10, step 11
+- **Context:** With hiding on, the Blizzard pet frame and the essential cooldowns frame stayed visible. Both are managed frames (`PlayerBottomManagedFrameTemplate` and `BottomManagedFrameTemplate`). Blizzard's layout code moves a managed frame back into its container whenever it is shown, which pulled them out of the hidden frame. The cooldowns frame was also not on the hide list at all.
+- **Decision:** When hiding a default frame, set its `ignoreFramePositionManager` flag, remove it from the managed containers' `showingFrames` lists, move it to the hidden frame, and hook `SetParent` so that anything that moves it back is undone after combat. Modules that replace a default frame hand its name to `Cluster:ReplaceDefaultFrame`, and the Hunter cooldowns part does so for `EssentialCooldownViewer`. All of it applies only when `hideDefaults` is on.
+- **Alternatives considered:** Hiding the frames with alpha 0, which leaves them taking mouse input and space in the layout.
+- **Requirement IDs affected:** CLU-04, CLU-15

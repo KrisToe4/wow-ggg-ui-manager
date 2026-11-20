@@ -12,6 +12,7 @@ Hunter:AddPart("Indicators", Indicators)
 
 local WIDGET_GAP = 4
 local AMMO_H = 22
+local AMMO_WIDTH = 96
 local RANGE_H = 20
 local TICK = 0.1 -- seconds between range checks (INV-05)
 
@@ -162,6 +163,12 @@ local function UpdateRange()
     end
 end
 
+-- Shot timer state (HUN-17)
+local autoRepeat = false -- Auto Shot is switched on
+local shotStart          -- when the last Auto Shot went off
+local shotGap            -- seconds between the last two shots, measured (the real speed is secret)
+local SHOT_TICK = 0.03   -- the glow is redrawn about 30 times a second while Auto Shot is on
+
 local function Build(container, areas)
     local Cluster = ns.Cluster
     local rect = areas.player
@@ -170,7 +177,8 @@ local function Build(container, areas)
 
     ammoFrame = CreateFrame("Frame", "GGGUIManagerHunterAmmo", container)
     ammoFrame:SetPoint("TOPLEFT", container, "TOPLEFT", rect[1], -y)
-    ammoFrame:SetSize(width, AMMO_H)
+    ammoFrame:SetSize(AMMO_WIDTH, AMMO_H) -- the rest of the row is for the essential cooldowns (Cooldowns.lua)
+    Hunter.ammoRect = { x = rect[1], y = y, width = AMMO_WIDTH, height = AMMO_H }
     ammoIcon = ammoFrame:CreateTexture(nil, "ARTWORK")
     ammoIcon:SetSize(AMMO_H - 2, AMMO_H - 2)
     ammoIcon:SetPoint("LEFT", ammoFrame, "LEFT", 1, 0)
@@ -206,11 +214,91 @@ local function Build(container, areas)
         end
     end)
 
+    -- Shot timer (HUN-17): a glow that sweeps over the range bar from left to right between two Auto Shots.
+    -- Your ranged speed is a hidden "secret" number, so it is only handed to a status bar, never compared (D-013).
+    local glowFrame = CreateFrame("StatusBar", nil, rangeFrame)
+    glowFrame:SetAllPoints()
+    glowFrame:SetFrameLevel(rangeFrame:GetFrameLevel() + 10)
+    glowFrame:SetStatusBarTexture("Interface\\Buttons\\WHITE8X8")
+    glowFrame:SetStatusBarColor(0.5, 0.8, 1, 0.35)
+    glowFrame:GetStatusBarTexture():SetBlendMode("ADD")
+    glowFrame:SetMinMaxValues(0, 1)
+    glowFrame:SetValue(1)
+    local spark = glowFrame:CreateTexture(nil, "OVERLAY")
+    spark:SetSize(3, RANGE_H)
+    spark:SetBlendMode("ADD")
+    spark:SetColorTexture(1, 1, 1, 0.9)
+    spark:SetPoint("CENTER", glowFrame:GetStatusBarTexture(), "RIGHT", 0, 0)
+    glowFrame:Hide()
+
+    local function ShowShotProgress()
+        if not autoRepeat then
+            glowFrame:Hide()
+            return
+        end
+        local ready = true
+        if shotStart then
+            local elapsedShot = GetTime() - shotStart
+            glowFrame:SetValue(elapsedShot) -- the bar clamps this to the full length
+            -- Whether the shot is ready is only known once two shots have measured the gap between them.
+            ready = shotGap ~= nil and elapsedShot >= shotGap
+        else
+            glowFrame:SetMinMaxValues(0, 1)
+            glowFrame:SetValue(1)
+        end
+        spark:SetShown(not ready)
+        glowFrame:Show()
+    end
+
+    local shotElapsed = 0
+    glowFrame:SetScript("OnUpdate", function(_, dt)
+        shotElapsed = shotElapsed + dt
+        if shotElapsed >= SHOT_TICK then
+            shotElapsed = 0
+            if Hunter.active then pcall(ShowShotProgress) end
+        end
+    end)
+    glowFrame:SetScript("OnShow", function() shotElapsed = SHOT_TICK end)
+
     local events = CreateFrame("Frame")
-    events:RegisterEvent("BAG_UPDATE_DELAYED")
-    events:RegisterEvent("PLAYER_EQUIPMENT_CHANGED")
-    events:RegisterEvent("PLAYER_ENTERING_WORLD")
-    events:SetScript("OnEvent", function() if Hunter.active then pcall(UpdateAmmo) end end)
+    for _, event in ipairs({ "BAG_UPDATE_DELAYED", "PLAYER_EQUIPMENT_CHANGED", "PLAYER_ENTERING_WORLD",
+        "START_AUTOREPEAT_SPELL", "STOP_AUTOREPEAT_SPELL" }) do
+        pcall(events.RegisterEvent, events, event) -- an event this client lacks is skipped (INV-08)
+    end
+    pcall(events.RegisterUnitEvent, events, "UNIT_SPELLCAST_SUCCEEDED", "player")
+    events:SetScript("OnEvent", function(_, event, _, _, spellID)
+        if not Hunter.active then return end
+        if event == "START_AUTOREPEAT_SPELL" then
+            autoRepeat = true
+            pcall(ShowShotProgress)
+        elseif event == "STOP_AUTOREPEAT_SPELL" then
+            autoRepeat = false
+            shotStart, shotGap = nil, nil
+            pcall(ShowShotProgress)
+        elseif event == "UNIT_SPELLCAST_SUCCEEDED" then
+            -- Each Auto Shot starts a new sweep as long as your ranged speed.
+            local ok, isAutoShot = pcall(function() return spellID == AUTO_SHOT_ID end)
+            if ok and isAutoShot then
+                local now = GetTime()
+                -- The time since the last shot, when it is a believable gap, is the measured speed.
+                shotGap = (shotStart and now - shotStart < 8) and (now - shotStart) or nil
+                shotStart = now
+                local okSpeed, speed = pcall(UnitRangedDamage, "player")
+                if okSpeed and speed then
+                    pcall(glowFrame.SetMinMaxValues, glowFrame, 0, speed) -- a secret value is fine here
+                elseif shotGap then
+                    glowFrame:SetMinMaxValues(0, shotGap)
+                end
+                glowFrame:SetValue(0)
+            end
+        else
+            pcall(UpdateAmmo)
+        end
+    end)
+    if IsAutoRepeatSpell then
+        local ok, active = pcall(IsAutoRepeatSpell, "Auto Shot")
+        autoRepeat = ok and active and true or false
+    end
 
     pcall(UpdateAmmo)
     pcall(UpdateRange)
