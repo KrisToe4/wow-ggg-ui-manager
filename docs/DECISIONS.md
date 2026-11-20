@@ -181,3 +181,10 @@
 - **Decision:** Each button is a `SecureActionButtonTemplate` of type `macro` with `macrotext = "/use item:<id>"`, set out of combat. The ID form works for any item and the reticle behaves as if the item were clicked in the bag. Food and drink are told apart in this order: the tooltip words "eating" (food, also when both words appear) and "drinking" (drink), then the spell the item casts ("Food" or "Drink"), then name words with whole-word matching. Only a tooltip result is cached. The campsite items are matched by exact name or by the spell they cast, because their item IDs are not known (docs/IDS.md).
 - **Alternatives considered:** `type="item"` with the item name, which depends on the name being unique and loaded. Matching campsite names by part of the name, which would match unrelated items.
 - **Requirement IDs affected:** CMP-03, CMP-06, CMP-07, CMP-09 (the tooltip words were suggested by the human)
+
+## D-027 The startup message prints from a short timer, not at once
+- **Date / step:** 2026-11-20 / SDD 0.12, step 13
+- **Context:** Other addons print their own load messages at login, and a message printed at once would scroll up under them.
+- **Decision:** The Startup module prints two lines 2 seconds after its `Enable`, which runs at `PLAYER_LOGIN`. It is registered last so it lists every module. Turning the message off sets the module's own `enabled` flag, so no extra setting exists.
+- **Alternatives considered:** Printing at `PLAYER_ENTERING_WORLD`, which also fires on every zone change.
+- **Requirement IDs affected:** STA-02, STA-03, STA-04

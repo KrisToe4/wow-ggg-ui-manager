@@ -3,8 +3,8 @@
 
 | | |
 |---|---|
-| **Version** | 0.11 (draft) |
-| **Supersedes** | 0.10 |
+| **Version** | 0.12 (draft) |
+| **Supersedes** | 0.11 |
 | **Audience** | LLM-based coding agents and human reviewers |
 | **Platform** | World of Warcraft addon, Lua 5.1, client "WoW Forever" (Interface 16001) |
 | **Addon folder** | `GGGUIManager/` |
@@ -29,6 +29,7 @@ This SDD is applied **one step at a time** (section 10). After every step the hu
 
 | Version | Change | Reason |
 |---|---|---|
+| 0.12 | Fourth module, Startup (section 7.4): a message in chat at login. Camp corrected from what the human and the game showed: CMP-06, CMP-09, CMP-11, step 12. Step 13 | The human wants a startup module that will later configure things to their liking. The scan in the game showed the real item data |
 | 0.11 | Third module, Camp (section 7.3): hearthstone, Cozy Sleeping Bag, campfire and campsite objects, best food and best drink as buttons in a new row under the player area. CMP-01 to CMP-12, CLU-19, step 12 | The human asked for a campfire and food module for every class |
 | 0.10 | Range indicator redesigned: nine bands from item ranges and the Auto Shot rule (HUN-12, HUN-13), ammo icon from the equipped slot (HUN-11) | In the game Raptor Strike reported "in range" at every distance, so melee was always lit. Huntmaster's method (item range ladder plus Auto Shot) worked |
 | 0.9 | Hunter widgets in the player area, as an experiment: CLU-18, HUN-11 to HUN-14, step 8. Party frames postponed | The human wants an ammo indicator and a range indicator in the player area and expects a lot of trial and error |
@@ -315,10 +316,10 @@ The third module. It puts the camping and resting items in one row of buttons un
 - **CMP-03** Every button is a secure item button (`type = "item"`, `item = <name>`, clicked on key up as in D-018), so clicking works in combat without addon code. A button shows the item's icon, its stack count and its cooldown, and the game's tooltip on hover.
 - **CMP-04** Hearthstone button: shown while a Hearthstone is in the bags. It uses the Hearthstone by name, so a different stone that replaces it still works if the name is added to the list in the file.
 - **CMP-05** Sleeping bag button: shown while the Cozy Sleeping Bag is in the bags.
-- **CMP-06** Campsite area: one button for each campfire and campsite object found in the bags, grown from the left in one line. The names come from a list at the top of the file: the Basic, Journeyman and Expert Campfires and the objects of each profession (Mana Well, Fermenter, Sharpening Wheel, Anvil, Fish Bowl, Camp Tent and the others from the camping guides). The list is edited when the human finds a name that is wrong or missing. Whether placing one is an item use or a spell is checked in the game with `/ggg camp scan` (CMP-11), and the buttons are built for the item case first.
+- **CMP-06** Campsite area: one button for each campfire and campsite object found in the bags, grown from the left in one line. The names come from a list at the top of the file: the Basic, Journeyman and Expert Campfires and the objects of each profession (Mana Well, Fermenter, Sharpening Wheel, Anvil, Fish Bowl, Camp Tent and the others from the camping guides). The list is edited when the human finds a name that is wrong or missing. Placing one is an item use that opens a ground targeting reticle (confirmed by the human), so the buttons use the item. An item counts when its ID is known, or its name is exactly an object's name, or the spell it casts is in the list. Item IDs seen in the game are in `docs/IDS.md`.
 - **CMP-07** Food button: shown while the bags hold food. It uses the food with the highest required level. When several have the same level, the larger stack wins, so the stack that runs out last is used first.
 - **CMP-08** Drink button: the same for drink.
-- **CMP-09** Food and drink are told apart by the item's use effect (the spell name the item casts, which for these items is "Food" or "Drink" in the spell data), with the item's name as a fallback. Items that restore both count as food. Required level comes from the item data. A value the game hides or does not return counts as level 0 and is never compared as a secret value (CLU-12).
+- **CMP-09** Food and drink are items of the Food and Drink class. They are told apart by the words in the tooltip, "eating" for food and "drinking" for drink (confirmed in the game for food). Items that say both count as food, and a readable tooltip with neither word is left out, for example a transformation treat. If no tooltip text is readable, the spell the item casts ("Food" or "Drink") decides, and then whole words in the item's name. Required level comes from the item data. A value the game hides or does not return counts as level 0 and is never compared as a secret value (CLU-12).
 - **CMP-10** Showing, hiding and changing what a button uses is a protected change, so it happens out of combat only (INV-01, CLU-13). It is queued after combat when the bags change during a fight. The row is rebuilt on `BAG_UPDATE_DELAYED`, `PLAYER_ENTERING_WORLD` and `PLAYER_REGEN_ENABLED`. The row is empty, not an error, when the bags hold none of the items.
 - **CMP-11** `/ggg camp scan` prints, for every item in the bags that the module would show or that looks like food, drink or a campsite item: its name, ID, class and subclass, required level, and the spell it casts. `/ggg camp` with no argument prints the same summary line by line for the buttons now shown. This is the probe the human uses to correct the name lists and to confirm the food and drink split.
 - **CMP-12** The name lists are plain tables in the Camp files, so adding a name is a one-line change.
@@ -326,6 +327,22 @@ The third module. It puts the camping and resting items in one row of buttons un
 **Saved data** (`ns.db.modules.Camp`): `{ enabled = true }` for now. Settings are added when a part needs them (DAT-04).
 
 **Known limitations.** The campfire and campsite item names come from the beta camping guides, which disagree in places, and no item IDs are known yet. The module matches by name until the scan shows the IDs. Whether the Cozy Sleeping Bag and the campsite objects are items the bags can hold, or something else, is unconfirmed. Food and drink classification by use effect is unconfirmed on this client.
+
+---
+
+## 7.4 Module: Startup
+
+The fourth module. It runs when the player logs in or reloads and, later, will configure things to the player's liking. This version only prints a message.
+
+- **STA-01** The module is registered as `Startup` with no `classes` field, so it is for every class (MOD-06). It is registered after the other modules, so it sees their state.
+- **STA-02** A moment after login, the module prints a short message in the normal chat window, in the addon's prefix colour. Line one has the addon version and points to `/ggg help`. Line two lists every registered module with its state, for example `Cluster on, Hunter on, Camp on, Startup on`. A module that is turned off shows `off`, and a module that is not for this class shows `not for this class`.
+- **STA-03** The message is printed once for each login and each reload, and does not print again while the player zones.
+- **STA-04** `/ggg startup` prints the message again. `/ggg startup on` and `/ggg startup off` turn the login message on and off (the module's `enabled` setting, DAT-04). With the module off, nothing prints at login but `/ggg startup` still works.
+- **STA-05** Applying the player's preferred settings at login is not part of this version. It is added later when the human lists the settings.
+
+**Saved data** (`ns.db.modules.Startup`): `{ enabled = true }`.
+
+**Known limitations.** The message may scroll away under messages from other addons that load later. The delay is a default in the file and is adjusted after the human sees it.
 
 ---
 
@@ -439,6 +456,15 @@ Use these **one at a time**. Each block gives the prompt, the requirements cover
 **Covers:** CMP-01 to CMP-12, CLU-19.
 **Acceptance:** with a Hearthstone in the bags, its button shows and uses it, also in combat. Food and drink buttons show the highest level item of each kind and change after the bags change. Campsite items found in the bags get buttons. `/ggg camp scan` prints the bag items. No errors, and no protected changes in combat.
 **Demo:** move items in and out of the bags, run `/ggg camp scan`, click each button, and fight with a stack of food in the bags.
+
+## Step 13: Startup module
+
+**Read:** 2, 7.4.
+**Status:** not started.
+**Prompt:** Add the `Startup` module in `Modules/Startup/Startup.lua` with the login message and `/ggg startup` (STA-01 to STA-05). Add the file to the `.toc` last, so it is registered after the other modules.
+**Covers:** STA-01 to STA-05.
+**Acceptance:** after login and after `/reload`, two lines appear in chat with the version and the module states. `/ggg startup off` stops them at the next login. No errors.
+**Demo:** `/reload`, then `/ggg startup`, then `/ggg startup off` and `/reload`.
 
 ## Step 9 onward
 
