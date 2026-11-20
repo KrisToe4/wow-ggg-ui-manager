@@ -174,3 +174,10 @@
 - **Decision:** When hiding a default frame, set its `ignoreFramePositionManager` flag, remove it from the managed containers' `showingFrames` lists, move it to the hidden frame, and hook `SetParent` so that anything that moves it back is undone after combat. Modules that replace a default frame hand its name to `Cluster:ReplaceDefaultFrame`, and the Hunter cooldowns part does so for `EssentialCooldownViewer`. All of it applies only when `hideDefaults` is on.
 - **Alternatives considered:** Hiding the frames with alpha 0, which leaves them taking mouse input and space in the layout.
 - **Requirement IDs affected:** CLU-04, CLU-15
+
+## D-026 Camp buttons use a macro `/use item:<id>`, and food or drink is told apart by tooltip words
+- **Date / step:** 2026-11-20 / SDD 0.11, step 12
+- **Context:** The Camp row needs secure buttons that use an item by ID, also for campfires that open a ground targeting reticle. Food and drink need to be told apart on a client that may hide tooltip text.
+- **Decision:** Each button is a `SecureActionButtonTemplate` of type `macro` with `macrotext = "/use item:<id>"`, set out of combat. The ID form works for any item and the reticle behaves as if the item were clicked in the bag. Food and drink are told apart in this order: the tooltip words "eating" (food, also when both words appear) and "drinking" (drink), then the spell the item casts ("Food" or "Drink"), then name words with whole-word matching. Only a tooltip result is cached. The campsite items are matched by exact name or by the spell they cast, because their item IDs are not known (docs/IDS.md).
+- **Alternatives considered:** `type="item"` with the item name, which depends on the name being unique and loaded. Matching campsite names by part of the name, which would match unrelated items.
+- **Requirement IDs affected:** CMP-03, CMP-06, CMP-07, CMP-09 (the tooltip words were suggested by the human)

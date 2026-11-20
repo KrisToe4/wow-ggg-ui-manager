@@ -25,7 +25,7 @@ local BAR_W = 3 * BUTTON_SIZE + 2 * BUTTON_GAP        -- one action bar: 3 colum
 local BAR_H = 4 * BUTTON_SIZE + 3 * BUTTON_GAP        -- and 4 rows
 local UNIT_W = 240                                    -- player area, pet area
 local PARTY_H = 40                                    -- the party row
-local EXTRA_H = 20                                    -- room under the bars for one more row of 22 px buttons
+local EXTRA_H = 46                                    -- room under the bars for two more rows of 22 px buttons (CLU-19)
 local MAIN_H = BAR_H + EXTRA_H                        -- height under the party row
 local OFFSET_Y = 24                                   -- distance from the bottom of the screen
 

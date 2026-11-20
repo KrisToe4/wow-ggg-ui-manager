@@ -3,8 +3,8 @@
 
 | | |
 |---|---|
-| **Version** | 0.10 (draft) |
-| **Supersedes** | 0.8 |
+| **Version** | 0.11 (draft) |
+| **Supersedes** | 0.10 |
 | **Audience** | LLM-based coding agents and human reviewers |
 | **Platform** | World of Warcraft addon, Lua 5.1, client "WoW Forever" (Interface 16001) |
 | **Addon folder** | `GGGUIManager/` |
@@ -29,6 +29,7 @@ This SDD is applied **one step at a time** (section 10). After every step the hu
 
 | Version | Change | Reason |
 |---|---|---|
+| 0.11 | Third module, Camp (section 7.3): hearthstone, Cozy Sleeping Bag, campfire and campsite objects, best food and best drink as buttons in a new row under the player area. CMP-01 to CMP-12, CLU-19, step 12 | The human asked for a campfire and food module for every class |
 | 0.10 | Range indicator redesigned: nine bands from item ranges and the Auto Shot rule (HUN-12, HUN-13), ammo icon from the equipped slot (HUN-11) | In the game Raptor Strike reported "in range" at every distance, so melee was always lit. Huntmaster's method (item range ladder plus Auto Shot) worked |
 | 0.9 | Hunter widgets in the player area, as an experiment: CLU-18, HUN-11 to HUN-14, step 8. Party frames postponed | The human wants an ammo indicator and a range indicator in the player area and expects a lot of trial and error |
 | 0.8 | Action bars defined: CLU-11 made specific, CLU-17 added, CLU-03 and layout sizes updated for 3 by 4 bars, steps 6 and 7, section 1.4 question 2 settled | The human asked for the four action bars next, as 3 columns by 4 rows |
@@ -253,6 +254,7 @@ The first module. It replaces the default player frame, pet frame, pet bar, part
 
   The bars sit side by side: bars 1 and 2 on the outer left (bar 1 outermost) and bars 3 and 4 on the outer right (bar 4 outermost). The slots are Blizzard's: bar 1 is slots 1 to 12, bar 2 (the bottom left bar) is 61 to 72, bar 3 (the bottom right bar) is 49 to 60 and bar 4 (the right bar) is 25 to 36. Bar 1 does not page in this version, so it always shows slots 1 to 12 and does not change for forms, stealth, stances or vehicles.
 - **CLU-18** Cluster tells other modules when it is built. `Cluster:OnBuilt(func)` calls `func(container, areas)` once the container and the parts exist, or at once if they already do. Other modules use it to place widgets in the free space of an area, for example the Hunter widgets under the player frame (HUN-14). The widgets are not secure frames, so they can change in combat.
+- **CLU-19** Cluster exposes the next free row of the player area: `areas.player.nextY` holds the offset under the last widget row placed there, and a module that adds a row reads it and then advances it by the row height and gap. The main area grows by one 22 px row plus its gap for the Camp row. Existing Hunter rows keep their places.
 - **CLU-17** Each action button shows the icon, the cooldown, the item count or charges, the key binding text, the macro name, grey when the action is unusable, red when the target is out of range, and the game's tooltip. Cooldown and count values may be hidden "secret" values in combat, so cooldowns are set from the game's duration object and counts as text without comparing them (CLU-12). Proc glow, equipped and active borders and spell flyouts come in step 7. Key bindings stay on the game's own bar commands, so the keys keep working and the new buttons only show the key text. Dragging actions onto and off the new buttons is not part of this version.
 
 ### Behaviour that applies to every part
@@ -301,6 +303,29 @@ These are an experiment. How they look and work will change as the human tries t
 ```
 
 **Known limitations.** Pet training points use `GetPetTrainingPoints`, which may not exist on this client. When it is missing, that alert and that line of `/ggg hunter pet` are skipped. Check it in the game.
+
+---
+
+## 7.3 Module: Camp
+
+The third module. It puts the camping and resting items in one row of buttons under the player area of the Cluster. It is for every class.
+
+- **CMP-01** The module is registered as `Camp` with no `classes` field, so it is for every class (MOD-06). Its frames use the `GGGUIManagerCamp` name prefix (INV-03).
+- **CMP-02** The module places itself through `Cluster:OnBuilt` (CLU-18), in the player area, in the first free row under whatever other modules have already placed there (CLU-19). If Cluster is off or not built, the buttons are not shown.
+- **CMP-03** Every button is a secure item button (`type = "item"`, `item = <name>`, clicked on key up as in D-018), so clicking works in combat without addon code. A button shows the item's icon, its stack count and its cooldown, and the game's tooltip on hover.
+- **CMP-04** Hearthstone button: shown while a Hearthstone is in the bags. It uses the Hearthstone by name, so a different stone that replaces it still works if the name is added to the list in the file.
+- **CMP-05** Sleeping bag button: shown while the Cozy Sleeping Bag is in the bags.
+- **CMP-06** Campsite area: one button for each campfire and campsite object found in the bags, grown from the left in one line. The names come from a list at the top of the file: the Basic, Journeyman and Expert Campfires and the objects of each profession (Mana Well, Fermenter, Sharpening Wheel, Anvil, Fish Bowl, Camp Tent and the others from the camping guides). The list is edited when the human finds a name that is wrong or missing. Whether placing one is an item use or a spell is checked in the game with `/ggg camp scan` (CMP-11), and the buttons are built for the item case first.
+- **CMP-07** Food button: shown while the bags hold food. It uses the food with the highest required level. When several have the same level, the larger stack wins, so the stack that runs out last is used first.
+- **CMP-08** Drink button: the same for drink.
+- **CMP-09** Food and drink are told apart by the item's use effect (the spell name the item casts, which for these items is "Food" or "Drink" in the spell data), with the item's name as a fallback. Items that restore both count as food. Required level comes from the item data. A value the game hides or does not return counts as level 0 and is never compared as a secret value (CLU-12).
+- **CMP-10** Showing, hiding and changing what a button uses is a protected change, so it happens out of combat only (INV-01, CLU-13). It is queued after combat when the bags change during a fight. The row is rebuilt on `BAG_UPDATE_DELAYED`, `PLAYER_ENTERING_WORLD` and `PLAYER_REGEN_ENABLED`. The row is empty, not an error, when the bags hold none of the items.
+- **CMP-11** `/ggg camp scan` prints, for every item in the bags that the module would show or that looks like food, drink or a campsite item: its name, ID, class and subclass, required level, and the spell it casts. `/ggg camp` with no argument prints the same summary line by line for the buttons now shown. This is the probe the human uses to correct the name lists and to confirm the food and drink split.
+- **CMP-12** The name lists are plain tables in the Camp files, so adding a name is a one-line change.
+
+**Saved data** (`ns.db.modules.Camp`): `{ enabled = true }` for now. Settings are added when a part needs them (DAT-04).
+
+**Known limitations.** The campfire and campsite item names come from the beta camping guides, which disagree in places, and no item IDs are known yet. The module matches by name until the scan shows the IDs. Whether the Cozy Sleeping Bag and the campsite objects are items the bags can hold, or something else, is unconfirmed. Food and drink classification by use effect is unconfirmed on this client.
 
 ---
 
@@ -405,6 +430,15 @@ Use these **one at a time**. Each block gives the prompt, the requirements cover
 **Covers:** CLU-18, HUN-11 to HUN-14.
 **Acceptance:** with a ranged weapon, the ammo widget shows the ammo icon and count in the player area. With a hostile target, the range widget lights the block that matches the distance and changes when the player or target moves. The probe prints its list. No errors.
 **Demo:** target a mob, walk toward and away from it, run `/ggg hunter range` at a few distances, shoot ammo and watch the count.
+
+## Step 12: Camp module
+
+**Read:** 2, 7.3, 7.1 (CLU-18, CLU-19).
+**Status:** not started.
+**Prompt:** Add the `Camp` module in `Modules/Camp/` with the hearthstone, sleeping bag, campsite area, food and drink buttons (CMP-01 to CMP-12) and `/ggg camp scan`. Add `nextY` to the player area in Cluster and grow the main area by one row (CLU-19). Add the files to the `.toc`.
+**Covers:** CMP-01 to CMP-12, CLU-19.
+**Acceptance:** with a Hearthstone in the bags, its button shows and uses it, also in combat. Food and drink buttons show the highest level item of each kind and change after the bags change. Campsite items found in the bags get buttons. `/ggg camp scan` prints the bag items. No errors, and no protected changes in combat.
+**Demo:** move items in and out of the bags, run `/ggg camp scan`, click each button, and fight with a stack of food in the bags.
 
 ## Step 9 onward
 

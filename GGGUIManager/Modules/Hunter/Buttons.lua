@@ -189,6 +189,7 @@ local function Build(container, areas)
     BuildRow(container, "Aspects", "aspect", player[1], top + ROW_GAP, player[3], ASPECTS)
     -- Tracking shares the row with the aspects and grows from the right edge.
     BuildRow(container, "Tracking", "tracking", player[1], top + ROW_GAP, player[3], TRACKING, true)
+    player.nextY = top + ROW_GAP + SIZE -- the next module's row in the player area starts here (CLU-19)
 
     -- Under the pet bar, which is one 22 px row under the pet frame (PetBar.lua).
     local petTop = pet[2] + Cluster.UNIT_FRAME_HEIGHT + 6 + SIZE + ROW_GAP
