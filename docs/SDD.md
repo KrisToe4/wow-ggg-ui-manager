@@ -3,8 +3,8 @@
 
 | | |
 |---|---|
-| **Version** | 0.12 (draft) |
-| **Supersedes** | 0.11 |
+| **Version** | 0.13 (draft) |
+| **Supersedes** | 0.12 |
 | **Audience** | LLM-based coding agents and human reviewers |
 | **Platform** | World of Warcraft addon, Lua 5.1, client "WoW Forever" (Interface 16001) |
 | **Addon folder** | `GGGUIManager/` |
@@ -29,6 +29,7 @@ This SDD is applied **one step at a time** (section 10). After every step the hu
 
 | Version | Change | Reason |
 |---|---|---|
+| 0.13 | Target, target of target, focus and focus target frames in the strip above the player and pet areas, in place of the party row: CLU-03, CLU-10, CLU-20 to CLU-24, step 14. Focus frame left-click sets focus and right-click clears it | The human wants the four target frames above the player and pet. Party frames are postponed again and get a new place later |
 | 0.12 | Fourth module, Startup (section 7.4): a message in chat at login. Camp corrected from what the human and the game showed: CMP-06, CMP-09, CMP-11, step 12. Step 13 | The human wants a startup module that will later configure things to their liking. The scan in the game showed the real item data |
 | 0.11 | Third module, Camp (section 7.3): hearthstone, Cozy Sleeping Bag, campfire and campsite objects, best food and best drink as buttons in a new row under the player area. CMP-01 to CMP-12, CLU-19, step 12 | The human asked for a campfire and food module for every class |
 | 0.10 | Range indicator redesigned: nine bands from item ranges and the Auto Shot rule (HUN-12, HUN-13), ammo icon from the equipped slot (HUN-11) | In the game Raptor Strike reported "in range" at every distance, so melee was always lit. Huntmaster's method (item range ladder plus Auto Shot) worked |
@@ -218,7 +219,8 @@ The first module. It replaces the default player frame, pet frame, pet bar, part
 ### Layout
 
 ```text
-                  [ Party 1 ][ Party 2 ][ Party 3 ][ Party 4 ]
+                  [ Target ][ Target's ][ Focus  ][ Focus's ]
+                  [        ][ target   ][        ][ target  ]
  +-----------+-----------+----------+----------+-----------+-----------+
  | Action    | Action    | Player   | Pet      | Action    | Action    |
  | Bar 1     | Bar 2     | frame    | frame    | Bar 3     | Bar 4     |
@@ -231,7 +233,7 @@ The first module. It replaces the default player frame, pet frame, pet bar, part
 
 - **CLU-01** The module is registered as `Cluster`. It has no `classes` field, so it is for every class (MOD-06).
 - **CLU-02** One container frame holds everything. It is anchored to the bottom centre of `UIParent` and the parts are positioned inside it (section 7.1, layout).
-- **CLU-03** Parts sit in this order from left to right: action bars 1 and 2 side by side (outer left), the player frame and its information (inner left), the pet frame, its information and the pet bar (inner right), action bars 3 and 4 (outer right). Party frames run horizontally, left to right, in a row above the player and pet area. Frame sizes and the cluster width are defaults in one table at the top of the file and are adjusted after the human sees them in the game.
+- **CLU-03** Parts sit in this order from left to right: action bars 1 and 2 side by side (outer left), the player frame and its information (inner left), the pet frame, its information and the pet bar (inner right), action bars 3 and 4 (outer right). The strip above the player and pet area holds the target frames (CLU-20). The party frames have no place in the layout for now (CLU-10). Frame sizes and the cluster width are defaults in one table at the top of the file and are adjusted after the human sees them in the game.
 - **CLU-04** To replace a default frame, the module builds its own and, when `hideDefaults` is on (CLU-15), hides Blizzard's frame. It never edits or re-skins Blizzard's frame. The hide method is recorded as a decision because it must not taint (INV-02).
 - **CLU-15** The setting `hideDefaults` is off by default. While it is off, Blizzard's frames are left alone and the new frames show beside them. `/ggg cluster hide on` and `/ggg cluster hide off` change it. Turning it on hides the default frames, and turning it off restores them only after a reload (MOD-03).
 - **CLU-05** The layout is fixed in this version. There is no edit mode and no user dragging (SCP-25).
@@ -243,7 +245,12 @@ The first module. It replaces the default player frame, pet frame, pet bar, part
 - **CLU-08** The pet frame and the pet bar are shown only while the player has a pet, and the container does not move when they appear or disappear.
 - **CLU-09** Pet bar: the pet's ten action slots, built on secure action buttons of the game's `pet` action type, in one row under the pet frame inside the inner right area. Each button shows the action's icon, its cooldown, a highlight while the action is active (for example the current stance) and a small mark when auto-cast is allowed or on. Left-click uses the action, right-click toggles auto-cast, and hovering shows the game's tooltip for the action.
 - **CLU-16** The pet bar is shown only while the player has a pet, by a secure state driver, so it appears and goes in combat without addon code touching it (INV-01, CLU-13). Empty slots are shown empty. Dragging actions between slots and key bindings on the new buttons are not part of this version. The game's own pet bar key bindings keep working.
-- **CLU-10** Party frames: up to four secure unit buttons for `party1` to `party4`, in a horizontal row. Defined in a later step.
+- **CLU-10** Party frames: postponed. The strip they were reserved in now holds the target frames (CLU-20), so the party frames get a new place when the human returns to them.
+- **CLU-20** Target frames: one part, `TargetFrames`, builds four frames for the units `target`, `targettarget`, `focus` and `focustarget`, in the strip above the player and pet areas. Target and its target are above the player area and focus and its target are above the pet area, side by side, each half the area's width less half a gap. The strip is 44 px high.
+- **CLU-21** Each is a secure unit button, so clicking works in combat (INV-02). Left-click targets the unit and right-click opens its menu, except on the focus frame (CLU-22). Target, target of target and focus target show only while their unit exists, using the game's secure unit watch, so they appear and go in combat without addon code (CLU-13).
+- **CLU-22** The focus frame is always shown. With no focus it is dim and reads "No focus" and "Left-click to set". Left-click runs `/focus`, which makes the current target the focus, replacing an existing one. Right-click runs `/clearfocus`. Both are secure macros and work in combat. The frame does not target the focus or open the unit menu.
+- **CLU-23** Each frame shows the unit's name, a health bar with the health text, and one small line such as `Level 25 Elite Beast` for a creature or `Level 60 Hunter` for a player, with `??` for a level the game reports as -1. The bar is red for an enemy and green otherwise. Health and names are passed straight to the bar and text (CLU-12). The small line is built only from values that are readable, and the parts that are not are left out. Updates come from unit events (INV-05).
+- **CLU-24** The default `TargetFrame` and `FocusFrame` are hidden under CLU-15. Their target of target frames are their children and go with them.
 - **CLU-11** Action bars 1 to 4: secure action buttons of the `action` type bound to the same action slots as Blizzard's bars, so the same abilities and macros show. Each bar is a grid of 3 columns and 4 rows, numbered across and then down:
 
   ```text
@@ -465,6 +472,15 @@ Use these **one at a time**. Each block gives the prompt, the requirements cover
 **Covers:** STA-01 to STA-05.
 **Acceptance:** after login and after `/reload`, two lines appear in chat with the version and the module states. `/ggg startup off` stops them at the next login. No errors.
 **Demo:** `/reload`, then `/ggg startup`, then `/ggg startup off` and `/reload`.
+
+## Step 14: Target frames
+
+**Read:** 2, 7.1 (CLU-10, CLU-12, CLU-13, CLU-20 to CLU-24).
+**Status:** not started.
+**Prompt:** Replace the party strip in `Cluster.lua` with the target strip, 44 px high. Add `Modules/Cluster/TargetFrames.lua` with the four frames, the focus clicks and the hide list. Add the file to the `.toc`.
+**Covers:** CLU-10, CLU-20 to CLU-24.
+**Acceptance:** with a target, the target frame shows its name, health and the small line, and the target of target frame follows it. Left-clicking the focus frame sets the current target as focus, right-clicking clears it, also in combat. With `hide on`, Blizzard's target and focus frames are gone. No errors.
+**Demo:** target a mob and a player, press the focus frame, clear it, and fight with a focus set.
 
 ## Step 9 onward
 

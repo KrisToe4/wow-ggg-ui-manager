@@ -24,9 +24,9 @@ local BUTTON_SIZE, BUTTON_GAP = 32, 2                -- action buttons (CLU-11, 
 local BAR_W = 3 * BUTTON_SIZE + 2 * BUTTON_GAP        -- one action bar: 3 columns
 local BAR_H = 4 * BUTTON_SIZE + 3 * BUTTON_GAP        -- and 4 rows
 local UNIT_W = 240                                    -- player area, pet area
-local PARTY_H = 40                                    -- the party row
+local TARGET_H = 44                                   -- the target frame strip above the player and pet
 local EXTRA_H = 46                                    -- room under the bars for two more rows of 22 px buttons (CLU-19)
-local MAIN_H = BAR_H + EXTRA_H                        -- height under the party row
+local MAIN_H = BAR_H + EXTRA_H                        -- height under the target strip
 local OFFSET_Y = 24                                   -- distance from the bottom of the screen
 
 -- Rectangles are { x, y, w, h } measured from the container's top left corner, y going down.
@@ -35,15 +35,15 @@ local x_player = BAR_W * 2 + GAP * 2
 local x_pet = x_player + UNIT_W + GAP
 local x_bar3 = x_pet + UNIT_W + GAP
 local x_bar4 = x_bar3 + BAR_W + GAP
-local mainY = PARTY_H + GAP
+local mainY = TARGET_H + GAP
 
 local CONTAINER_W = x_bar4 + BAR_W
-local CONTAINER_H = PARTY_H + GAP + MAIN_H
+local CONTAINER_H = TARGET_H + GAP + MAIN_H
 
 Cluster.BUTTON_SIZE, Cluster.BUTTON_GAP = BUTTON_SIZE, BUTTON_GAP
 
 Cluster.areas = {
-    party   = { x_player, 0, UNIT_W * 2 + GAP, PARTY_H, "Party frames" },
+    targets = { x_player, 0, UNIT_W * 2 + GAP, TARGET_H, "Target frames" },
     bar1    = { 0, mainY, BAR_W, BAR_H, "Action bar 1" },
     bar2    = { x_bar2, mainY, BAR_W, BAR_H, "Action bar 2" },
     player  = { x_player, mainY, UNIT_W, MAIN_H, "Player" },
@@ -65,8 +65,6 @@ local function BuildContainer()
     container:SetFrameStrata("LOW")
 
     for name, rect in pairs(Cluster.areas) do
-      -- The party row stays reserved but its placeholder is not drawn until the party frames are built.
-      if name ~= "party" then
         local box = container:CreateTexture(nil, "BACKGROUND")
         box:SetPoint("TOPLEFT", container, "TOPLEFT", rect[1], -rect[2])
         box:SetSize(rect[3], rect[4])
@@ -76,7 +74,6 @@ local function BuildContainer()
         label:SetText(rect[5])
         placeholders[#placeholders + 1] = box
         placeholders[#placeholders + 1] = label
-      end
     end
 end
 

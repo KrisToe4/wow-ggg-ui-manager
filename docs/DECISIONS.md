@@ -188,3 +188,19 @@
 - **Decision:** The Startup module prints two lines 2 seconds after its `Enable`, which runs at `PLAYER_LOGIN`. It is registered last so it lists every module. Turning the message off sets the module's own `enabled` flag, so no extra setting exists.
 - **Alternatives considered:** Printing at `PLAYER_ENTERING_WORLD`, which also fires on every zone change.
 - **Requirement IDs affected:** STA-02, STA-03, STA-04
+
+## D-028 The focus frame stays visible when empty and uses focus macros for its clicks
+- **Date / step:** 2026-11-20 / SDD 0.13, step 14
+- **Context:** The human wants left-click on the focus frame to set the current target as focus and right-click to clear it. A frame hidden by unit watch when there is no focus could not be clicked to set one.
+- **Decision:** The focus frame is not registered with the unit watch. It always shows, dim and reading "No focus", and its clicks are secure macros (`/focus` and `/clearfocus`), so they work in combat. The other three frames use the unit watch. The frame therefore no longer targets the focus or opens the unit menu. The party strip is replaced by the target strip and the party frames are postponed again.
+- **Alternatives considered:** A separate small "set focus" button beside a unit-watched frame. Shift-click for targeting the focus, left for later if the human wants it.
+- **Requirement IDs affected:** CLU-10, CLU-20, CLU-21, CLU-22
+
+## D-029 The cooldown row reads only C_CooldownViewer, never the viewer frame's Lua methods
+- **Date / step:** 2026-11-21 / SDD 0.13, step 11 (fix)
+- **Context:** An error appeared in Blizzard's Tracked Buffs viewer (`CooldownViewer.lua`, `CheckAuraAddedAlertTriggers`): a table could not be accessed while tainted by GGGUIManager. The Cooldowns part called `EssentialCooldownViewer:GetCooldownIDs()`, which reads the Cooldown Manager's shared data provider from addon code.
+- **Decision:** The row takes its list only from `C_CooldownViewer.GetCooldownViewerCategorySet`, a C function that leaves no taint in Lua state. The list may not follow the order set in the Cooldown Manager's own settings. The cause is not proven, so if the error comes back the burying of the cooldown viewer frames (D-025) is the next suspect.
+- **Alternatives considered:** Keeping the frame's method inside `securecallfunction`, which was not tried.
+- **Requirement IDs affected:** HUN-18 (proposed)
+
+Addendum to D-028 (2026-11-21): the focus button's `unit` attribute is `none`, not `focus`. Blizzard's secure click code returns without acting when the unit exists not (`SecureTemplates.lua`, around line 722), so a button for an empty focus could never be clicked. The frame's own updates still read the real `focus` unit.

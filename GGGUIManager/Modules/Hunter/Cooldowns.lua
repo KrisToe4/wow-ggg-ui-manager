@@ -22,11 +22,8 @@ local shownIDs = {} -- the spell IDs the row is showing now, for the probe
 ---------------------------------------------------------------------
 -- The cooldown IDs the Cooldown Manager shows in its Essential section, in the player's order.
 local function CooldownIDs()
-    local viewer = _G.EssentialCooldownViewer
-    if viewer and viewer.GetCooldownIDs then
-        local ok, ids = pcall(viewer.GetCooldownIDs, viewer)
-        if ok and type(ids) == "table" and #ids > 0 then return ids, "the Essential Cooldowns frame's list" end
-    end
+    -- Only the game's own C functions are used here. Calling the viewer frame's Lua methods from addon code
+    -- spreads taint into the Cooldown Manager, which broke the Tracked Buffs viewer (D-029).
     if C_CooldownViewer and C_CooldownViewer.GetCooldownViewerCategorySet and Enum and Enum.CooldownViewerCategory then
         local ok, ids = pcall(C_CooldownViewer.GetCooldownViewerCategorySet, Enum.CooldownViewerCategory.Essential, false)
         if ok and type(ids) == "table" then return ids, "the Essential category" end
