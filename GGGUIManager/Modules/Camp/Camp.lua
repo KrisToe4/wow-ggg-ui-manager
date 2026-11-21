@@ -1,6 +1,6 @@
 local addonName, ns = ...
 
--- Camp: a row of buttons under the player area (SDD section 7.3). Hearthstone, Cozy Sleeping Bag, the campfire and
+-- Camp: a grid of buttons in its own area beside the player area (SDD section 7.3, CLU-25). Hearthstone, Cozy Sleeping Bag, the campfire and
 -- campsite objects in the bags, and the best food and best drink. Every button is a secure button that uses the
 -- item, so clicking works in combat. Showing, hiding and changing a button only happens out of combat.
 
@@ -10,11 +10,11 @@ ns.Camp = Camp
 Camp.active = false
 
 local Items = ns.CampItems
-local SIZE, GAP, ROW_GAP = 22, 2, 4
-local MAX_CAMPSITE = 12
+local SIZE, GAP = 22, 2
+local COLUMNS = 2
+local MAX_CAMPSITE = 8 -- the grid holds 12 buttons, four of them fixed (CMP-13)
 
 local holder
-local width = 0
 local buttons = {}  -- every button, for cooldown refresh
 local fixed = {}    -- hearthstone, bag, food, drink
 local campsite = {} -- the pool for campsite objects
@@ -88,15 +88,9 @@ local function SetItem(button, entry)
     return true
 end
 
-local function Place(button, entry, anchor, x)
-    if not SetItem(button, entry) then return false end
-    button:ClearAllPoints()
-    button:SetPoint(anchor, holder, anchor, x, 0)
-    return true
-end
 
 ---------------------------------------------------------------------
--- The row
+-- The grid
 ---------------------------------------------------------------------
 local function Rebuild()
     queued = false
@@ -122,28 +116,19 @@ local function Rebuild()
     local food, drink = Items.Best(entries)
 
     shown = {}
-    local step = SIZE + GAP
-    local left, right = 0, 0
     local function Note(label, entry)
         local info = Items.Info(entry.id)
         shown[#shown + 1] = { label = label, name = info and info.name or "?", id = entry.id, count = entry.count }
     end
 
-    if Place(fixed.hearth, hearth, "TOPLEFT", left) then left = left + step; Note("hearthstone", hearth) end
-    if Place(fixed.bag, sleeping, "TOPLEFT", left) then left = left + step; Note("sleeping bag", sleeping) end
-    if Place(fixed.drink, drink, "TOPRIGHT", -right) then right = right + step; Note("drink", drink) end
-    if Place(fixed.food, food, "TOPRIGHT", -right) then right = right + step; Note("food", food) end
-
-    -- A small gap between the fixed buttons and the campsite objects.
-    if left > 0 then left = left + GAP * 2 end
-    local room = math.floor((width - left - right) / step)
+    -- The buttons keep fixed places in the grid (CMP-13), so only their items change here.
+    if SetItem(fixed.hearth, hearth) then Note("hearthstone", hearth) end
+    if SetItem(fixed.bag, sleeping) then Note("sleeping bag", sleeping) end
+    if SetItem(fixed.drink, drink) then Note("drink", drink) end
+    if SetItem(fixed.food, food) then Note("food", food) end
     for index, button in ipairs(campsite) do
         local entry = camp[index]
-        if entry and index <= room and Place(button, entry, "TOPLEFT", left + (index - 1) * step) then
-            Note("campsite", entry)
-        else
-            SetItem(button, nil)
-        end
+        if SetItem(button, entry) then Note("campsite", entry) end
     end
 end
 
@@ -157,25 +142,27 @@ local function Schedule()
 end
 
 ---------------------------------------------------------------------
--- Cluster placement (CMP-02)
+-- Cluster placement (CMP-02, CLU-25)
 ---------------------------------------------------------------------
 local function Build(container, areas)
-    local Cluster = ns.Cluster
-    local rect = areas.player
-    local base = rect.nextY or (rect[2] + Cluster.UNIT_FRAME_HEIGHT + 6)
-    local top = base + ROW_GAP
-    rect.nextY = top + SIZE -- the next module's row starts under this one (CLU-19)
-
-    width = rect[3]
+    local rect = areas.camp
     holder = CreateFrame("Frame", "GGGUIManagerCamp", container)
-    holder:SetPoint("TOPLEFT", container, "TOPLEFT", rect[1], -top)
-    holder:SetSize(width, SIZE)
+    holder:SetPoint("TOPLEFT", container, "TOPLEFT", rect[1], -rect[2])
+    holder:SetSize(rect[3], rect[4])
 
     fixed.hearth = CreateButton("Hearthstone")
     fixed.bag = CreateButton("SleepingBag")
     fixed.food = CreateButton("Food")
     fixed.drink = CreateButton("Drink")
     for index = 1, MAX_CAMPSITE do campsite[index] = CreateButton("Campsite" .. index) end
+
+    -- Two wide, numbered across and then down: hearthstone, bag, drink, food, then the campsite objects.
+    local order = { fixed.hearth, fixed.bag, fixed.drink, fixed.food }
+    for _, button in ipairs(campsite) do order[#order + 1] = button end
+    for slot, button in ipairs(order) do
+        local column, row = (slot - 1) % COLUMNS, math.floor((slot - 1) / COLUMNS)
+        button:SetPoint("TOPLEFT", holder, "TOPLEFT", column * (SIZE + GAP), -row * (SIZE + GAP))
+    end
 
     local events = CreateFrame("Frame")
     for _, event in ipairs({ "BAG_UPDATE_DELAYED", "PLAYER_ENTERING_WORLD", "PLAYER_REGEN_ENABLED",

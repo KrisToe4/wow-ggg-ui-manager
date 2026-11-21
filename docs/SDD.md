@@ -3,8 +3,8 @@
 
 | | |
 |---|---|
-| **Version** | 0.13 (draft) |
-| **Supersedes** | 0.12 |
+| **Version** | 0.14 (draft) |
+| **Supersedes** | 0.13 |
 | **Audience** | LLM-based coding agents and human reviewers |
 | **Platform** | World of Warcraft addon, Lua 5.1, client "WoW Forever" (Interface 16001) |
 | **Addon folder** | `GGGUIManager/` |
@@ -29,6 +29,7 @@ This SDD is applied **one step at a time** (section 10). After every step the hu
 
 | Version | Change | Reason |
 |---|---|---|
+| 0.14 | Camp moves out of the player area into its own area, two buttons wide, between action bar 2 and the player area: CLU-03, CLU-19, CLU-25, CMP-02, CMP-06, CMP-10, step 15 | The human wants the camping buttons in their own place beside the player area. The player area gets its extra row back |
 | 0.13 | Target, target of target, focus and focus target frames in the strip above the player and pet areas, in place of the party row: CLU-03, CLU-10, CLU-20 to CLU-24, step 14. Focus frame left-click sets focus and right-click clears it | The human wants the four target frames above the player and pet. Party frames are postponed again and get a new place later |
 | 0.12 | Fourth module, Startup (section 7.4): a message in chat at login. Camp corrected from what the human and the game showed: CMP-06, CMP-09, CMP-11, step 12. Step 13 | The human wants a startup module that will later configure things to their liking. The scan in the game showed the real item data |
 | 0.11 | Third module, Camp (section 7.3): hearthstone, Cozy Sleeping Bag, campfire and campsite objects, best food and best drink as buttons in a new row under the player area. CMP-01 to CMP-12, CLU-19, step 12 | The human asked for a campfire and food module for every class |
@@ -221,19 +222,19 @@ The first module. It replaces the default player frame, pet frame, pet bar, part
 ```text
                   [ Target ][ Target's ][ Focus  ][ Focus's ]
                   [        ][ target   ][        ][ target  ]
- +-----------+-----------+----------+----------+-----------+-----------+
- | Action    | Action    | Player   | Pet      | Action    | Action    |
- | Bar 1     | Bar 2     | frame    | frame    | Bar 3     | Bar 4     |
- |           |           | and info | and info |           |           |
- |           |           |          | Pet bar  |           |           |
- +-----------+-----------+----------+----------+-----------+-----------+
-   outer left  outer left  inner     inner      outer right outer right
-                           left      right
+ +-----------+-----------+------+----------+----------+-----------+-----------+
+ | Action    | Action    | Camp | Player   | Pet      | Action    | Action    |
+ | Bar 1     | Bar 2     |      | frame    | frame    | Bar 3     | Bar 4     |
+ |           |           |      | and info | and info |           |           |
+ |           |           |      |          | Pet bar  |           |           |
+ +-----------+-----------+------+----------+----------+-----------+-----------+
+   outer left  outer left  camp   inner     inner      outer right outer right
+                                  left      right
 ```
 
 - **CLU-01** The module is registered as `Cluster`. It has no `classes` field, so it is for every class (MOD-06).
 - **CLU-02** One container frame holds everything. It is anchored to the bottom centre of `UIParent` and the parts are positioned inside it (section 7.1, layout).
-- **CLU-03** Parts sit in this order from left to right: action bars 1 and 2 side by side (outer left), the player frame and its information (inner left), the pet frame, its information and the pet bar (inner right), action bars 3 and 4 (outer right). The strip above the player and pet area holds the target frames (CLU-20). The party frames have no place in the layout for now (CLU-10). Frame sizes and the cluster width are defaults in one table at the top of the file and are adjusted after the human sees them in the game.
+- **CLU-03** Parts sit in this order from left to right: action bars 1 and 2 side by side (outer left), the Camp area (CLU-25), the player frame and its information (inner left), the pet frame, its information and the pet bar (inner right), action bars 3 and 4 (outer right). The strip above the player and pet area holds the target frames (CLU-20). The party frames have no place in the layout for now (CLU-10). Frame sizes and the cluster width are defaults in one table at the top of the file and are adjusted after the human sees them in the game.
 - **CLU-04** To replace a default frame, the module builds its own and, when `hideDefaults` is on (CLU-15), hides Blizzard's frame. It never edits or re-skins Blizzard's frame. The hide method is recorded as a decision because it must not taint (INV-02).
 - **CLU-15** The setting `hideDefaults` is off by default. While it is off, Blizzard's frames are left alone and the new frames show beside them. `/ggg cluster hide on` and `/ggg cluster hide off` change it. Turning it on hides the default frames, and turning it off restores them only after a reload (MOD-03).
 - **CLU-05** The layout is fixed in this version. There is no edit mode and no user dragging (SCP-25).
@@ -251,6 +252,7 @@ The first module. It replaces the default player frame, pet frame, pet bar, part
 - **CLU-22** The focus frame is always shown. With no focus it is dim and reads "No focus" and "Left-click to set". Left-click runs `/focus`, which makes the current target the focus, replacing an existing one. Right-click runs `/clearfocus`. Both are secure macros and work in combat. The frame does not target the focus or open the unit menu.
 - **CLU-23** Each frame shows the unit's name, a health bar with the health text, and one small line such as `Level 25 Elite Beast` for a creature or `Level 60 Hunter` for a player, with `??` for a level the game reports as -1. The bar is red for an enemy and green otherwise. Health and names are passed straight to the bar and text (CLU-12). The small line is built only from values that are readable, and the parts that are not are left out. Updates come from unit events (INV-05).
 - **CLU-24** The default `TargetFrame` and `FocusFrame` are hidden under CLU-15. Their target of target frames are their children and go with them.
+- **CLU-25** Camp area: a column two buttons wide and as tall as the main area, between action bar 2 and the player area. It is an area of Cluster named `camp`, and the Camp module fills it (CMP-02). The area is 46 px wide (two 22 px buttons and a 2 px gap) and about 154 px high, which holds 6 rows of 22 px buttons.
 - **CLU-11** Action bars 1 to 4: secure action buttons of the `action` type bound to the same action slots as Blizzard's bars, so the same abilities and macros show. Each bar is a grid of 3 columns and 4 rows, numbered across and then down:
 
   ```text
@@ -262,7 +264,7 @@ The first module. It replaces the default player frame, pet frame, pet bar, part
 
   The bars sit side by side: bars 1 and 2 on the outer left (bar 1 outermost) and bars 3 and 4 on the outer right (bar 4 outermost). The slots are Blizzard's: bar 1 is slots 1 to 12, bar 2 (the bottom left bar) is 61 to 72, bar 3 (the bottom right bar) is 49 to 60 and bar 4 (the right bar) is 25 to 36. Bar 1 does not page in this version, so it always shows slots 1 to 12 and does not change for forms, stealth, stances or vehicles.
 - **CLU-18** Cluster tells other modules when it is built. `Cluster:OnBuilt(func)` calls `func(container, areas)` once the container and the parts exist, or at once if they already do. Other modules use it to place widgets in the free space of an area, for example the Hunter widgets under the player frame (HUN-14). The widgets are not secure frames, so they can change in combat.
-- **CLU-19** Cluster exposes the next free row of the player area: `areas.player.nextY` holds the offset under the last widget row placed there, and a module that adds a row reads it and then advances it by the row height and gap. The main area grows by one 22 px row plus its gap for the Camp row. Existing Hunter rows keep their places.
+- **CLU-19** Cluster exposes the next free row of the player area: `areas.player.nextY` holds the offset under the last widget row placed there, and a module that adds a row reads it and then advances it by the row height and gap. Camp no longer uses it (CLU-25), so the main area is back to the height of the action bars plus one 22 px row for the Hunter buttons.
 - **CLU-17** Each action button shows the icon, the cooldown, the item count or charges, the key binding text, the macro name, grey when the action is unusable, red when the target is out of range, and the game's tooltip. Cooldown and count values may be hidden "secret" values in combat, so cooldowns are set from the game's duration object and counts as text without comparing them (CLU-12). Proc glow, equipped and active borders and spell flyouts come in step 7. Key bindings stay on the game's own bar commands, so the keys keep working and the new buttons only show the key text. Dragging actions onto and off the new buttons is not part of this version.
 
 ### Behaviour that applies to every part
@@ -319,15 +321,16 @@ These are an experiment. How they look and work will change as the human tries t
 The third module. It puts the camping and resting items in one row of buttons under the player area of the Cluster. It is for every class.
 
 - **CMP-01** The module is registered as `Camp` with no `classes` field, so it is for every class (MOD-06). Its frames use the `GGGUIManagerCamp` name prefix (INV-03).
-- **CMP-02** The module places itself through `Cluster:OnBuilt` (CLU-18), in the player area, in the first free row under whatever other modules have already placed there (CLU-19). If Cluster is off or not built, the buttons are not shown.
+- **CMP-02** The module places itself through `Cluster:OnBuilt` (CLU-18), in the Camp area of Cluster (CLU-25). If Cluster is off or not built, the buttons are not shown.
+- **CMP-13** The buttons are in a grid two wide, numbered across and then down. The first four slots are the Hearthstone, the Cozy Sleeping Bag, the drink and the food, in that order. The campsite objects follow in the order of the list. A slot with no item is left empty, so the fixed buttons always keep the same place. The grid holds 12 buttons, so at most 8 campsite objects show.
 - **CMP-03** Every button is a secure item button (`type = "item"`, `item = <name>`, clicked on key up as in D-018), so clicking works in combat without addon code. A button shows the item's icon, its stack count and its cooldown, and the game's tooltip on hover.
 - **CMP-04** Hearthstone button: shown while a Hearthstone is in the bags. It uses the Hearthstone by name, so a different stone that replaces it still works if the name is added to the list in the file.
 - **CMP-05** Sleeping bag button: shown while the Cozy Sleeping Bag is in the bags.
-- **CMP-06** Campsite area: one button for each campfire and campsite object found in the bags, grown from the left in one line. The names come from a list at the top of the file: the Basic, Journeyman and Expert Campfires and the objects of each profession (Mana Well, Fermenter, Sharpening Wheel, Anvil, Fish Bowl, Camp Tent and the others from the camping guides). The list is edited when the human finds a name that is wrong or missing. Placing one is an item use that opens a ground targeting reticle (confirmed by the human), so the buttons use the item. An item counts when its ID is known, or its name is exactly an object's name, or the spell it casts is in the list. Item IDs seen in the game are in `docs/IDS.md`.
+- **CMP-06** Campsite area: one button for each campfire and campsite object found in the bags, placed after the four fixed buttons, in the same grid, across and then down. The names come from a list at the top of the file: the Basic, Journeyman and Expert Campfires and the objects of each profession (Mana Well, Fermenter, Sharpening Wheel, Anvil, Fish Bowl, Camp Tent and the others from the camping guides). The list is edited when the human finds a name that is wrong or missing. Placing one is an item use that opens a ground targeting reticle (confirmed by the human), so the buttons use the item. An item counts when its ID is known, or its name is exactly an object's name, or the spell it casts is in the list. Item IDs seen in the game are in `docs/IDS.md`.
 - **CMP-07** Food button: shown while the bags hold food. It uses the food with the highest required level. When several have the same level, the larger stack wins, so the stack that runs out last is used first.
 - **CMP-08** Drink button: the same for drink.
 - **CMP-09** Food and drink are items of the Food and Drink class. They are told apart by the words in the tooltip, "eating" for food and "drinking" for drink (confirmed in the game for food). Items that say both count as food, and a readable tooltip with neither word is left out, for example a transformation treat. If no tooltip text is readable, the spell the item casts ("Food" or "Drink") decides, and then whole words in the item's name. Required level comes from the item data. A value the game hides or does not return counts as level 0 and is never compared as a secret value (CLU-12).
-- **CMP-10** Showing, hiding and changing what a button uses is a protected change, so it happens out of combat only (INV-01, CLU-13). It is queued after combat when the bags change during a fight. The row is rebuilt on `BAG_UPDATE_DELAYED`, `PLAYER_ENTERING_WORLD` and `PLAYER_REGEN_ENABLED`. The row is empty, not an error, when the bags hold none of the items.
+- **CMP-10** Showing, hiding and changing what a button uses is a protected change, so it happens out of combat only (INV-01, CLU-13). It is queued after combat when the bags change during a fight. The grid is rebuilt on `BAG_UPDATE_DELAYED`, `PLAYER_ENTERING_WORLD` and `PLAYER_REGEN_ENABLED`. The grid is empty, not an error, when the bags hold none of the items.
 - **CMP-11** `/ggg camp scan` prints, for every item in the bags that the module would show or that looks like food, drink or a campsite item: its name, ID, class and subclass, required level, and the spell it casts. `/ggg camp` with no argument prints the same summary line by line for the buttons now shown. This is the probe the human uses to correct the name lists and to confirm the food and drink split.
 - **CMP-12** The name lists are plain tables in the Camp files, so adding a name is a one-line change.
 
@@ -481,6 +484,15 @@ Use these **one at a time**. Each block gives the prompt, the requirements cover
 **Covers:** CLU-10, CLU-20 to CLU-24.
 **Acceptance:** with a target, the target frame shows its name, health and the small line, and the target of target frame follows it. Left-clicking the focus frame sets the current target as focus, right-clicking clears it, also in combat. With `hide on`, Blizzard's target and focus frames are gone. No errors.
 **Demo:** target a mob and a player, press the focus frame, clear it, and fight with a focus set.
+
+## Step 15: Camp area
+
+**Read:** 2, 7.1 (CLU-03, CLU-18, CLU-19, CLU-25), 7.3 (CMP-02, CMP-06, CMP-13).
+**Status:** not started.
+**Prompt:** Add the `camp` area to Cluster between action bar 2 and the player area, and put the Camp buttons in it as a grid two wide (CMP-13). Take the Camp row out of the player area and return the main area's extra height to 20.
+**Covers:** CLU-03, CLU-19, CLU-25, CMP-02, CMP-06, CMP-10, CMP-13.
+**Acceptance:** the Camp buttons sit in their own column beside the player area, in the same places each time. The player area has no Camp row. The Hunter rows are unchanged. No errors.
+**Demo:** `/reload`, check the column, add and remove campsite items from the bags.
 
 ## Step 9 onward
 

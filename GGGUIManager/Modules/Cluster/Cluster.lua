@@ -25,13 +25,15 @@ local BAR_W = 3 * BUTTON_SIZE + 2 * BUTTON_GAP        -- one action bar: 3 colum
 local BAR_H = 4 * BUTTON_SIZE + 3 * BUTTON_GAP        -- and 4 rows
 local UNIT_W = 240                                    -- player area, pet area
 local TARGET_H = 44                                   -- the target frame strip above the player and pet
-local EXTRA_H = 46                                    -- room under the bars for two more rows of 22 px buttons (CLU-19)
+local EXTRA_H = 20                                    -- room under the bars for one more row of 22 px buttons (Hunter)
+local CAMP_W = 2 * 22 + 2                             -- the Camp column: two 22 px buttons and a gap (CLU-25)
 local MAIN_H = BAR_H + EXTRA_H                        -- height under the target strip
 local OFFSET_Y = 24                                   -- distance from the bottom of the screen
 
 -- Rectangles are { x, y, w, h } measured from the container's top left corner, y going down.
 local x_bar2 = BAR_W + GAP
-local x_player = BAR_W * 2 + GAP * 2
+local x_camp = BAR_W * 2 + GAP * 2
+local x_player = x_camp + CAMP_W + GAP
 local x_pet = x_player + UNIT_W + GAP
 local x_bar3 = x_pet + UNIT_W + GAP
 local x_bar4 = x_bar3 + BAR_W + GAP
@@ -46,6 +48,7 @@ Cluster.areas = {
     targets = { x_player, 0, UNIT_W * 2 + GAP, TARGET_H, "Target frames" },
     bar1    = { 0, mainY, BAR_W, BAR_H, "Action bar 1" },
     bar2    = { x_bar2, mainY, BAR_W, BAR_H, "Action bar 2" },
+    camp    = { x_camp, mainY, CAMP_W, MAIN_H, "Camp" },
     player  = { x_player, mainY, UNIT_W, MAIN_H, "Player" },
     pet     = { x_pet, mainY, UNIT_W, MAIN_H, "Pet and pet bar" },
     bar3    = { x_bar3, mainY, BAR_W, BAR_H, "Action bar 3" },

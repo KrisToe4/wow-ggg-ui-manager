@@ -204,3 +204,10 @@
 - **Requirement IDs affected:** HUN-18 (proposed)
 
 Addendum to D-028 (2026-11-21): the focus button's `unit` attribute is `none`, not `focus`. Blizzard's secure click code returns without acting when the unit exists not (`SecureTemplates.lua`, around line 722), so a button for an empty focus could never be clicked. The frame's own updates still read the real `focus` unit.
+
+## D-030 Camp is an area of Cluster, two buttons wide, with fixed slots
+- **Date / step:** 2026-11-21 / SDD 0.14, step 15
+- **Context:** The human wants the camping buttons out of the player area and in their own place beside it. A column one button wide would hold only two campsite objects after the four fixed buttons, so the human chose two wide.
+- **Decision:** Cluster gets an area `camp` (46 px wide, as tall as the main area) between action bar 2 and the player area. The player, pet and target strip, and bars 3 and 4 move right by its width, and the container is centred, so the cluster is wider. The Camp module fills the area as a grid two wide with fixed slots: hearthstone, bag, drink and food first, then up to eight campsite objects. Each slot is positioned once at build time, so a missing item leaves a gap and the others never move. `EXTRA_H` goes back to 20 and `nextY` is kept for the Hunter rows.
+- **Alternatives considered:** One wide, which holds too few campsite objects. A packed layout that closes gaps, which makes buttons move under the mouse.
+- **Requirement IDs affected:** CLU-03, CLU-19, CLU-25, CMP-02, CMP-13
