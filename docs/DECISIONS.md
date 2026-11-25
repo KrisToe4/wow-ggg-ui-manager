@@ -211,3 +211,26 @@ Addendum to D-028 (2026-11-21): the focus button's `unit` attribute is `none`, n
 - **Decision:** Cluster gets an area `camp` (46 px wide, as tall as the main area) between action bar 2 and the player area. The player, pet and target strip, and bars 3 and 4 move right by its width, and the container is centred, so the cluster is wider. The Camp module fills the area as a grid two wide with fixed slots: hearthstone, bag, drink and food first, then up to eight campsite objects. Each slot is positioned once at build time, so a missing item leaves a gap and the others never move. `EXTRA_H` goes back to 20 and `nextY` is kept for the Hunter rows.
 - **Alternatives considered:** One wide, which holds too few campsite objects. A packed layout that closes gaps, which makes buttons move under the mouse.
 - **Requirement IDs affected:** CLU-03, CLU-19, CLU-25, CMP-02, CMP-13
+
+## D-031 Hunter buttons are three rows from the left, with traps added
+- **Date / step:** 2026-11-21 / SDD 0.15, step 16
+- **Context:** The human wants the aspects and tracking combined as one area and a traps area added in the player cluster.
+- **Decision:** Aspects, tracking and traps are three rows of 22 px secure spell buttons under the range bar, each growing from the left. The old shared row with tracking growing from the right is gone. `EXTRA_H` rises to 58 so the rows fit, which also makes the Camp column taller. Traps are plain spell buttons with no active tint. `Buttons.lua` keeps the `fromRight` option in `BuildRow` unused.
+- **Alternatives considered:** Traps as a third group in the aspect row, which would leave too little room for nine aspect buttons.
+- **Requirement IDs affected:** HUN-15, CLU-19
+
+## D-032 The nameplate bar reuses the player bar's band and shots, and only reads the nameplate
+- **Date / step:** 2026-11-24 / SDD 0.16, step 17
+- **Context:** The human wants the range and shot timers on the target's enemy nameplate. A second range measurement would double the range checks, and anything written to a Blizzard nameplate frame risks taint like the cooldown viewer error (D-029).
+- **Decision:** `Indicators.lua` stores the band it measured in `Hunter.bandNow`, shares the shot state through `Hunter.ShotState()` and feeds extra status bars listed in `Hunter.shotBars` on each Auto Shot, so the hidden shot speed is still only passed to status bars. `Nameplates.lua` has one frame of its own that it parents to the target's nameplate and anchors under that nameplate's health bar. It only reads fields of the nameplate (`UnitFrame`, `healthBar`) and skips a forbidden plate. The bar is a fixed 98 px wide. It depends on the player-area range bar running, so it shows nothing when Cluster is off.
+- **Alternatives considered:** A separate range check for the bar, and sizing the bar to the nameplate width, which may be hidden from addons like the cooldown viewer's position was.
+- **Requirement IDs affected:** HUN-19
+
+## D-033 Layer refresh detection starts as a read-only probe
+- **Date / step:** 2026-11-24 / step 18 (probe)
+- **Context:** WoW Forever warns about five minutes before a forced layer change, with Refresh Now and Okay buttons and an arrow near the chat box. The pages found give no event name, frame name or API for it, and Blizzard's 12.1.5 UI source in the reference folder has no code for it. Whether an addon can detect it is not known.
+- **Decision:** Build a Layers module with only a probe. It listens to every game event (muting the everyday ones after a 20 second learning period), logs chat lines, and once a second reports Blizzard frames that become visible, with their names and texts. A frame whose name or text holds refresh, layer, phase or shard is watched, so its countdown text is logged as it changes. The log is saved with the character (500 lines). The probe only reads, so it cannot taint (D-029). The real warning module is designed after the log shows what the client exposes.
+- **Alternatives considered:** Guessing event names and building the countdown now, which would likely not work. Reading the NPC GUID for the layer number, which only shows the layer after a change.
+- **Requirement IDs affected:** none yet
+
+**Addendum to D-032 (2026-11-25):** the bar is anchored under the plate's cast bar when it has one, because a cast covered it under the health bar. A hidden cast bar keeps its place, so the bar does not jump when a cast starts. Without a cast bar it hangs 16 px under the health bar.

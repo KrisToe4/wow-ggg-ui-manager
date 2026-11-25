@@ -14,6 +14,7 @@ Item and spell IDs gathered for modules, with where each came from. Check any ID
 | Scarlet Banner | 278030 | WarcraftTavern | Cosmetic, not checked in game |
 | Fish Bowl | 279967 | `/ggg camp scan`, 2026-11-20 | Seen in game. Casts spell 1307245 |
 | First Aid Kit | 279968 | `/ggg camp scan`, 2026-11-20 | Seen in game. Casts spell 1307244 |
+| Pouch of Violet Dust (toy) | 289439 | Wowhead and WoWDB links on the Warcraft Wiki page, not stated as the ID | Inferred, not checked in game. A toy, so it is used from the toy box. 30 minute cooldown. Turns the campfire purple and extends Camp Benefits to 2 hours. Temporary, to be removed in early December 2026 |
 | Unroll Bag (Cozy Sleeping Bag cast) | spell 429961 | `/ggg camp scan` | Seen in game |
 
 ### Campsite spells (from WarcraftTavern, "Camping Objects and Buffs")

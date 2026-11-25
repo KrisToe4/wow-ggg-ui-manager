@@ -3,8 +3,8 @@
 
 | | |
 |---|---|
-| **Version** | 0.14 (draft) |
-| **Supersedes** | 0.13 |
+| **Version** | 0.16 (draft) |
+| **Supersedes** | 0.15 |
 | **Audience** | LLM-based coding agents and human reviewers |
 | **Platform** | World of Warcraft addon, Lua 5.1, client "WoW Forever" (Interface 16001) |
 | **Addon folder** | `GGGUIManager/` |
@@ -29,6 +29,8 @@ This SDD is applied **one step at a time** (section 10). After every step the hu
 
 | Version | Change | Reason |
 |---|---|---|
+| 0.16 | Feign Death button added to the Hunter button area (HUN-15) and a range and shot timer bar on the target's nameplate (HUN-19, step 17) | The human wants an easy-to-hit Feign Death button and the range and shot timers on the enemy nameplate |
+| 0.15 | Hunter button area: aspects and tracking become one area of two rows and a third row of traps is added: HUN-15, HUN-16, CLU-19, step 16 | The human wants aspects and tracking combined and a traps area in the player cluster |
 | 0.14 | Camp moves out of the player area into its own area, two buttons wide, between action bar 2 and the player area: CLU-03, CLU-19, CLU-25, CMP-02, CMP-06, CMP-10, step 15 | The human wants the camping buttons in their own place beside the player area. The player area gets its extra row back |
 | 0.13 | Target, target of target, focus and focus target frames in the strip above the player and pet areas, in place of the party row: CLU-03, CLU-10, CLU-20 to CLU-24, step 14. Focus frame left-click sets focus and right-click clears it | The human wants the four target frames above the player and pet. Party frames are postponed again and get a new place later |
 | 0.12 | Fourth module, Startup (section 7.4): a message in chat at login. Camp corrected from what the human and the game showed: CMP-06, CMP-09, CMP-11, step 12. Step 13 | The human wants a startup module that will later configure things to their liking. The scan in the game showed the real item data |
@@ -264,7 +266,7 @@ The first module. It replaces the default player frame, pet frame, pet bar, part
 
   The bars sit side by side: bars 1 and 2 on the outer left (bar 1 outermost) and bars 3 and 4 on the outer right (bar 4 outermost). The slots are Blizzard's: bar 1 is slots 1 to 12, bar 2 (the bottom left bar) is 61 to 72, bar 3 (the bottom right bar) is 49 to 60 and bar 4 (the right bar) is 25 to 36. Bar 1 does not page in this version, so it always shows slots 1 to 12 and does not change for forms, stealth, stances or vehicles.
 - **CLU-18** Cluster tells other modules when it is built. `Cluster:OnBuilt(func)` calls `func(container, areas)` once the container and the parts exist, or at once if they already do. Other modules use it to place widgets in the free space of an area, for example the Hunter widgets under the player frame (HUN-14). The widgets are not secure frames, so they can change in combat.
-- **CLU-19** Cluster exposes the next free row of the player area: `areas.player.nextY` holds the offset under the last widget row placed there, and a module that adds a row reads it and then advances it by the row height and gap. Camp no longer uses it (CLU-25), so the main area is back to the height of the action bars plus one 22 px row for the Hunter buttons.
+- **CLU-19** Cluster exposes the next free row of the player area: `areas.player.nextY` holds the offset under the last widget row placed there, and a module that adds a row reads it and then advances it by the row height and gap. Camp no longer uses it (CLU-25). The main area is the height of the action bars plus 58 px for the three Hunter button rows (HUN-15).
 - **CLU-17** Each action button shows the icon, the cooldown, the item count or charges, the key binding text, the macro name, grey when the action is unusable, red when the target is out of range, and the game's tooltip. Cooldown and count values may be hidden "secret" values in combat, so cooldowns are set from the game's duration object and counts as text without comparing them (CLU-12). Proc glow, equipped and active borders and spell flyouts come in step 7. Key bindings stay on the game's own bar commands, so the keys keep working and the new buttons only show the key text. Dragging actions onto and off the new buttons is not part of this version.
 
 ### Behaviour that applies to every part
@@ -303,13 +305,18 @@ These are an experiment. How they look and work will change as the human tries t
 - **HUN-13** Range probe: `/ggg hunter range` prints every range measurement the client offers for the current target, so the human can stand at different distances and report which measurements change. It lists the interact distance checks, the item range ladder, Raptor Strike and Auto Shot by spell ID, the range of several hunter spells with their minimum and maximum range from the spell data, and the unit distance call if the client has it.
 - **HUN-14** The widgets are placed by the Hunter module inside the Cluster container, in the free space under the player frame (CLU-18). If Cluster is off or not built, the widgets are not shown.
 
+- **HUN-15** Hunter button area: under the range indicator in the player area, three rows of 22 px secure spell buttons, each growing from the left. Row one is the aspects (Hawk, Monkey, Cheetah, Pack, Wild, Beast, Viper, Wolf, Dragonhawk), row two is the tracking spells (Track Beasts, Humanoids, Hidden, Elementals, Undead, Demons, Giants, Dragonkin) and row three is the traps (Freezing Trap, Immolation Trap, Frost Trap, Explosive Trap, Snake Trap). Only spells the character knows are shown, and a spell the client does not have is skipped. Clicking works in combat, and showing or hiding a button happens out of combat only (INV-01). Each button shows the cooldown and the game's tooltip. The aspect that is on and the tracking that is on are tinted green. Traps have no tint. A tall Feign Death button, 46 px wide and as high as the three rows, sits at the right of them, so each row is 190 px wide, and it is tinted green while the player is feigning. `/ggg hunter buttons` lists which spell names the game found and which it did not.
+- **HUN-16** Pet buttons: in the pet area under the pet bar, a row of 22 px buttons (Revive Pet, Dismiss Pet, Feed Pet, Tame Beast, Beast Lore) and a row of three wide buttons (Call Pet, Mend Pet, Beast Training) in fixed slots. Mend Pet is cast on the pet. The same rules as HUN-15 apply.
+
+- **HUN-19** Nameplate bar: while the current target can be attacked and its nameplate is shown, a small copy of the range bar (HUN-12) is shown under the health bar of that nameplate, on Blizzard's own nameplates. It is about 98 px wide and 6 px high with no text. The block for the target's band is lit and the shot timer glow (HUN-17) sweeps across it. The band is the one the player-area range bar measured last, so no extra range checks are made. The bar is a child of the nameplate, anchored to its health bar, and addon code only reads the nameplate's fields and never writes to them (INV-02). A nameplate the game marks as forbidden is skipped. `/ggg hunter nameplate on|off` turns it on or off, and it is on by default.
 **Saved data** (`ns.db.modules.Hunter`):
 
 ```text
 { enabled = true,
   ammo = { warn = 200, critical = 50 },
   pet = { alerts = true },
-  deadzone = { enabled = true, point = { "CENTER", "UIParent", "CENTER", 0, 160 } } }
+  deadzone = { enabled = true, point = { "CENTER", "UIParent", "CENTER", 0, 160 } },
+  nameplate = { enabled = true } }
 ```
 
 **Known limitations.** Pet training points use `GetPetTrainingPoints`, which may not exist on this client. When it is missing, that alert and that line of `/ggg hunter pet` are skipped. Check it in the game.
@@ -493,6 +500,24 @@ Use these **one at a time**. Each block gives the prompt, the requirements cover
 **Covers:** CLU-03, CLU-19, CLU-25, CMP-02, CMP-06, CMP-10, CMP-13.
 **Acceptance:** the Camp buttons sit in their own column beside the player area, in the same places each time. The player area has no Camp row. The Hunter rows are unchanged. No errors.
 **Demo:** `/reload`, check the column, add and remove campsite items from the bags.
+
+## Step 16: Hunter button area and traps
+
+**Read:** 2, 7.1 (CLU-19), 7.2 (HUN-15, HUN-16).
+**Status:** not started.
+**Prompt:** In `Buttons.lua`, put the aspects and the tracking spells on two rows from the left and add the trap row under them. Raise the main area's extra height in `Cluster.lua` to fit three rows. Add the trap names to `/ggg hunter buttons`.
+**Covers:** HUN-15, CLU-19.
+**Acceptance:** the aspects, tracking and trap spells the character knows show on three rows under the range bar and work in combat. The area fits inside the cluster. No errors.
+**Demo:** `/reload`, click a trap, an aspect and a tracking spell, run `/ggg hunter buttons`.
+
+## Step 17: Nameplate range and shot timer
+
+**Read:** 2, 7.2 (HUN-12, HUN-17 as described in the shot timer decision D-023, HUN-19).
+**Status:** not started.
+**Prompt:** Share the current band and the shot timer state from `Indicators.lua`. Add `Modules/Hunter/Nameplates.lua` with the nameplate bar and `/ggg hunter nameplate`. Add the file to the `.toc`.
+**Covers:** HUN-19.
+**Acceptance:** with an attackable target and enemy nameplates on, a small range bar with the shot glow shows under the target's nameplate and follows target changes. It is gone with no target and with `nameplate off`. No taint errors.
+**Demo:** target mobs at different distances, shoot with Auto Shot, change targets, turn it off and on.
 
 ## Step 9 onward
 

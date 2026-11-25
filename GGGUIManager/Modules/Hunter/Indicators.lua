@@ -34,6 +34,8 @@ local BANDS = {
     { label = "Max", colour = { 0.3, 0.85, 1 } },  -- 9 shooting range edge
 }
 local FAR = #BANDS + 1
+Hunter.BANDS = BANDS      -- the nameplate bar (Nameplates.lua) draws the same bands
+Hunter.shotBars = {}      -- extra status bars that sweep with the shot timer, added by Nameplates.lua
 
 ---------------------------------------------------------------------
 -- Measurements
@@ -151,6 +153,7 @@ end
 
 local function UpdateRange()
     local band = CurrentBand()
+    Hunter.bandNow = band -- read by the nameplate bar, so it makes no range checks of its own (HUN-19)
     for index, segment in ipairs(segments) do
         local colour = BANDS[index].colour
         if band == index then
@@ -168,6 +171,9 @@ local autoRepeat = false -- Auto Shot is switched on
 local shotStart          -- when the last Auto Shot went off
 local shotGap            -- seconds between the last two shots, measured (the real speed is secret)
 local SHOT_TICK = 0.03   -- the glow is redrawn about 30 times a second while Auto Shot is on
+
+-- The shot timer state, for the nameplate bar: Auto Shot on, when the last shot went off, the measured gap.
+function Hunter.ShotState() return autoRepeat, shotStart, shotGap end
 
 local function Build(container, areas)
     local Cluster = ns.Cluster
@@ -290,6 +296,14 @@ local function Build(container, areas)
                     glowFrame:SetMinMaxValues(0, shotGap)
                 end
                 glowFrame:SetValue(0)
+                for _, bar in ipairs(Hunter.shotBars) do
+                    if okSpeed and speed then
+                        pcall(bar.SetMinMaxValues, bar, 0, speed)
+                    elseif shotGap then
+                        bar:SetMinMaxValues(0, shotGap)
+                    end
+                    bar:SetValue(0)
+                end
             end
         else
             pcall(UpdateAmmo)

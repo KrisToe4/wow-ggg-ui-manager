@@ -32,6 +32,11 @@ Items.CAMPSITE = {
     { 1229517, "Camp Chair" }, { 1262985, "Field Guide" }, { 1262982, "Trapper's Workbench" },
     { 1263425, "Faction Banner" }, { 1263032, "Spinning Wheel" }, { 1263080, "Loom" },
 }
+-- A toy used on the campfire (a toy is used from the toy box, not from the bags). The ID is taken from the item's
+-- Wowhead and WoWDB links on the Warcraft Wiki and is not yet checked on this client (docs/IDS.md).
+Items.TOY_ID = 289439
+Items.TOY_NAME = "Pouch of Violet Dust"
+
 Items.CAMPSITE_ITEM_IDS = { -- item IDs seen in the game (docs/IDS.md), with the object name
     [278030] = "Scarlet Banner", [279967] = "Fish Bowl", [279968] = "First Aid Kit",
 }

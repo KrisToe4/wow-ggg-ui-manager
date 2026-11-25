@@ -12,11 +12,11 @@ Camp.active = false
 local Items = ns.CampItems
 local SIZE, GAP = 22, 2
 local COLUMNS = 2
-local MAX_CAMPSITE = 8 -- the grid holds 12 buttons, four of them fixed (CMP-13)
+local MAX_CAMPSITE = 7 -- the grid holds 12 buttons, five of them fixed (CMP-13)
 
 local holder
 local buttons = {}  -- every button, for cooldown refresh
-local fixed = {}    -- hearthstone, bag, food, drink
+local fixed = {}    -- hearthstone, bag, food, drink, toy
 local campsite = {} -- the pool for campsite objects
 local shown = {}    -- what the row shows now: { label, name, id, count }, for the command
 local scheduled, queued = false, false
@@ -77,7 +77,12 @@ local function SetItem(button, entry)
     end
     if button.itemID ~= entry.id then
         button.itemID = entry.id
-        button:SetAttribute("macrotext", "/use item:" .. entry.id)
+        if button.toy then
+            button:SetAttribute("type", "toy") -- a toy is used from the toy box
+            button:SetAttribute("toy", entry.id)
+        else
+            button:SetAttribute("macrotext", "/use item:" .. entry.id)
+        end
         local info = Items.Info(entry.id)
         local icon = info and info.icon or (C_Item and C_Item.GetItemIconByID and C_Item.GetItemIconByID(entry.id))
         button.icon:SetTexture(icon)
@@ -114,6 +119,7 @@ local function Rebuild()
     end
     table.sort(camp, function(a, b) if a.order ~= b.order then return a.order < b.order end return a.id < b.id end)
     local food, drink = Items.Best(entries)
+    local toy = PlayerHasToy and Items.TOY_ID and PlayerHasToy(Items.TOY_ID) and { id = Items.TOY_ID, count = 1 } or nil
 
     shown = {}
     local function Note(label, entry)
@@ -126,6 +132,7 @@ local function Rebuild()
     if SetItem(fixed.bag, sleeping) then Note("sleeping bag", sleeping) end
     if SetItem(fixed.drink, drink) then Note("drink", drink) end
     if SetItem(fixed.food, food) then Note("food", food) end
+    if SetItem(fixed.toy, toy) then Note("toy", toy) end
     for index, button in ipairs(campsite) do
         local entry = camp[index]
         if SetItem(button, entry) then Note("campsite", entry) end
@@ -154,10 +161,12 @@ local function Build(container, areas)
     fixed.bag = CreateButton("SleepingBag")
     fixed.food = CreateButton("Food")
     fixed.drink = CreateButton("Drink")
+    fixed.toy = CreateButton("Toy")
+    fixed.toy.toy = true
     for index = 1, MAX_CAMPSITE do campsite[index] = CreateButton("Campsite" .. index) end
 
-    -- Two wide, numbered across and then down: hearthstone, bag, drink, food, then the campsite objects.
-    local order = { fixed.hearth, fixed.bag, fixed.drink, fixed.food }
+    -- Two wide, numbered across and then down: hearthstone, bag, drink, food, toy, then the campsite objects.
+    local order = { fixed.hearth, fixed.bag, fixed.drink, fixed.food, fixed.toy }
     for _, button in ipairs(campsite) do order[#order + 1] = button end
     for slot, button in ipairs(order) do
         local column, row = (slot - 1) % COLUMNS, math.floor((slot - 1) / COLUMNS)
@@ -166,7 +175,8 @@ local function Build(container, areas)
 
     local events = CreateFrame("Frame")
     for _, event in ipairs({ "BAG_UPDATE_DELAYED", "PLAYER_ENTERING_WORLD", "PLAYER_REGEN_ENABLED",
-        "GET_ITEM_INFO_RECEIVED", "BAG_UPDATE_COOLDOWN", "SPELL_UPDATE_COOLDOWN" }) do
+        "GET_ITEM_INFO_RECEIVED", "BAG_UPDATE_COOLDOWN", "SPELL_UPDATE_COOLDOWN", "TOYS_UPDATED",
+        "NEW_TOY_ADDED" }) do
         pcall(events.RegisterEvent, events, event) -- an event this client lacks is skipped (INV-08)
     end
     events:SetScript("OnEvent", function(_, event)
@@ -246,5 +256,10 @@ ns:RegisterCommand("camp", function(rest)
     for _, item in ipairs(shown) do
         print(("  %s: %s (id %d) x%d"):format(item.label, item.name, item.id, item.count))
     end
+    -- The toy's ID is not checked on this client yet, so the game's own name for that ID is shown.
+    local gameName = C_Item and C_Item.GetItemNameByID and C_Item.GetItemNameByID(Items.TOY_ID)
+    local known = PlayerHasToy and PlayerHasToy(Items.TOY_ID)
+    print(("  toy %s (id %d): the game calls it %s, %s"):format(Items.TOY_NAME, Items.TOY_ID, tostring(gameName),
+        known and "it is in your toy box" or "it is not in your toy box"))
     print("  /ggg camp scan   list the bag items the module cares about. scan all lists every item")
 end, "scan | scan all (camp row)")

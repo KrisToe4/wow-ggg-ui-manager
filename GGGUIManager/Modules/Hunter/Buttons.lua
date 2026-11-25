@@ -1,7 +1,7 @@
 local addonName, ns = ...
 
 -- Hunter part: spell buttons in the Cluster (SDD HUN-15, HUN-16).
---   Aspects (from the left) and Tracking (from the right) share one row in the player area, under the range indicator
+--   Aspects, Tracking and Traps: three rows of buttons in the player area, under the range indicator (HUN-15)
 --   Pet action row                in the pet area, under the pet bar
 -- Each button is a secure "spell" button, so clicking works in combat without addon code. Only the spells the
 -- character knows are shown. Showing and hiding buttons is a protected change, so it only happens out of combat.
@@ -18,10 +18,13 @@ local ASPECTS = { "Aspect of the Hawk", "Aspect of the Monkey", "Aspect of the C
     "Aspect of the Dragonhawk" }
 local TRACKING = { "Track Beasts", "Track Humanoids", "Track Hidden", "Track Elementals", "Track Undead",
     "Track Demons", "Track Giants", "Track Dragonkin" }
+local TRAPS = { "Freezing Trap", "Immolation Trap", "Frost Trap", "Explosive Trap", "Snake Trap" }
 local PET_ACTIONS = { "Revive Pet", "Dismiss Pet", "Feed Pet", "Tame Beast", "Beast Lore" }
 -- The three used most get wide buttons in a row of their own under the small ones (HUN-16). They keep fixed slots.
 local PET_BIG = { "Call Pet", "Mend Pet", "Beast Training" }
 local BIG_H = 30
+local FEIGN = { "Feign Death" }
+local FEIGN_W = 46 -- a tall button at the right of the three rows, easy to hit
 local PET_TARGET = { ["Mend Pet"] = "pet" } -- the unit the spell is cast on, when it is not the current target
 
 local rows = {}
@@ -45,7 +48,7 @@ end
 
 local function IsActive(row, name)
     local ok, result = pcall(function()
-        if row.kind == "aspect" then
+        if row.kind == "aspect" or row.kind == "feign" then
             if AuraUtil and AuraUtil.FindAuraByName then return AuraUtil.FindAuraByName(name, "player") ~= nil end
         elseif row.kind == "tracking" then
             if GetTrackingTexture then
@@ -94,7 +97,18 @@ local function CreateButton(parent, name, index, spellName, big)
     back:SetColorTexture(0, 0, 0, 0.6)
     button.icon = button:CreateTexture(nil, "ARTWORK")
     button.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
-    if big then
+    if big and big.tall then
+        -- A tall button: a square icon on top and the spell name under it.
+        button.icon:SetSize(big.width - 2, big.width - 2)
+        button.icon:SetPoint("TOP", 0, -1)
+        local label = button:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+        label:SetPoint("BOTTOM", 0, 3)
+        label:SetText("Feign" .. "\n" .. "Death")
+        button.label = label
+        local highlight = button:CreateTexture(nil, "HIGHLIGHT")
+        highlight:SetAllPoints()
+        highlight:SetColorTexture(1, 1, 1, 0.12)
+    elseif big then
         -- A wide button: a square icon on the left and the spell name beside it.
         button.icon:SetSize(big.height - 2, big.height - 2)
         button.icon:SetPoint("LEFT", 1, 0)
@@ -186,10 +200,15 @@ local function Build(container, areas)
     local player, pet = areas.player, areas.pet
 
     local top = Hunter.playerWidgetsBottom or (player[2] + Cluster.UNIT_FRAME_HEIGHT + 6 + 22 + 4 + 20)
-    BuildRow(container, "Aspects", "aspect", player[1], top + ROW_GAP, player[3], ASPECTS)
-    -- Tracking shares the row with the aspects and grows from the right edge.
-    BuildRow(container, "Tracking", "tracking", player[1], top + ROW_GAP, player[3], TRACKING, true)
-    player.nextY = top + ROW_GAP + SIZE -- the next module's row in the player area starts here (CLU-19)
+    local rowStep = SIZE + ROW_GAP
+    local rowWidth = player[3] - FEIGN_W - GAP * 2 -- the rows leave the right side for Feign Death
+    BuildRow(container, "Aspects", "aspect", player[1], top + ROW_GAP, rowWidth, ASPECTS)
+    BuildRow(container, "Tracking", "tracking", player[1], top + ROW_GAP + rowStep, rowWidth, TRACKING)
+    BuildRow(container, "Traps", "trap", player[1], top + ROW_GAP + rowStep * 2, rowWidth, TRAPS)
+    -- Feign Death: one tall button as high as the three rows, on the right.
+    BuildRow(container, "FeignDeath", "feign", player[1] + player[3] - FEIGN_W, top + ROW_GAP, FEIGN_W, FEIGN, false,
+        { width = FEIGN_W, height = SIZE * 3 + ROW_GAP * 2, tall = true })
+    player.nextY = top + ROW_GAP + rowStep * 2 + SIZE -- the next row in the player area would start here (CLU-19)
 
     -- Under the pet bar, which is one 22 px row under the pet frame (PetBar.lua).
     local petTop = pet[2] + Cluster.UNIT_FRAME_HEIGHT + 6 + SIZE + ROW_GAP
@@ -224,7 +243,7 @@ end
 ---------------------------------------------------------------------
 function Buttons:Command()
     print(ns.PREFIX .. "hunter button spells (shown when the game finds the spell by name):")
-    for _, group in ipairs({ { "Aspects", ASPECTS }, { "Tracking", TRACKING }, { "Pet actions", PET_ACTIONS }, { "Big pet buttons", PET_BIG } }) do
+    for _, group in ipairs({ { "Aspects", ASPECTS }, { "Tracking", TRACKING }, { "Traps", TRAPS }, { "Feign Death", FEIGN }, { "Pet actions", PET_ACTIONS }, { "Big pet buttons", PET_BIG } }) do
         local found, missing = {}, {}
         for _, spell in ipairs(group[2]) do
             if SpellData(spell) then found[#found + 1] = spell else missing[#missing + 1] = spell end
