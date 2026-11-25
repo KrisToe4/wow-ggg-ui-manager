@@ -234,3 +234,24 @@ Addendum to D-028 (2026-11-21): the focus button's `unit` attribute is `none`, n
 - **Requirement IDs affected:** none yet
 
 **Addendum to D-032 (2026-11-25):** the bar is anchored under the plate's cast bar when it has one, because a cast covered it under the health bar. A hidden cast bar keeps its place, so the bar does not jump when a cast starts. Without a cast bar it hangs 16 px under the health bar.
+
+## D-034 The player area loses the range bar and shot glow, the cooldown row takes its place
+- **Date / step:** 2026-11-25 / step 19
+- **Context:** The range and shot timer now show on the target's nameplate (D-032), so the copies in the player area are not needed. The human chose a bigger single cooldown row over a two row wrap.
+- **Decision:** `Indicators.lua` no longer draws the range segments or the shot glow. It still measures the range ten times a second on a plain frame and keeps the shot state, because the nameplate bar reads `Hunter.bandNow` and `Hunter.ShotState()`. The range check is skipped when the nameplate bar is turned off. The ammo widget stays alone at the top left. `Cooldowns.lua` uses the row under it, the full width of the area, with icons up to 30 px (they shrink when there are many). `EXTRA_H` rises from 58 to 68 for the taller row, which makes the Camp column and the cluster 10 px taller. This replaces the note in D-032 that the nameplate bar depends on the player-area range bar.
+- **Alternatives considered:** Two rows of 22 px icons with nothing below moving, and tall 44 px icons beside a small ammo block.
+- **Requirement IDs affected:** HUN-11, HUN-12, HUN-17, HUN-18, HUN-19, CLU-19
+
+## D-035 The ammo block moves beside Feign Death and the cooldown row moves up
+- **Date / step:** 2026-11-25 / step 20
+- **Context:** With the range bar gone (D-034) the ammo widget was alone in its row. The human asked to move it down beside the Feign Death button, with the icon on top and the count under it.
+- **Decision:** The ammo block is 34 px wide and as tall as the three button rows (74 px), directly left of Feign Death. `Buttons.lua` shares `FEIGN_W`, `ROW_GAP` and the three-row height through the `Hunter` table, and `Indicators.lua` exports `AMMO_W` for the row width, so the sizes are written once. The ammo row disappears, so the essential cooldowns row sits right under the unit frame, and `EXTRA_H` drops to 42 to remove the empty row (the cluster is 26 px shorter than at step 19). The three rows lose 34 px of width, so a row shows six 22 px buttons before it would run into the ammo block, which is enough for the spells a hunter knows at this level but is worth watching as more are learned. With no ammo the count reads 0 in red, because the block is too narrow for the words.
+- **Alternatives considered:** Keeping the freed row empty for later use, and putting the ammo block on the left of the three rows.
+- **Requirement IDs affected:** HUN-11, HUN-15, HUN-18, CLU-19
+
+## D-036 A player cast bar under the power bar, and the Hunter parts move down
+- **Date / step:** 2026-11-25 / step 21
+- **Context:** The human asked for the cast bar below the mana bar and for the Hunter components to move down in the player area.
+- **Decision:** `PlayerFrame.lua` builds a 14 px cast bar under the unit frame (2 px gap), driven by the player's spell cast events, with values read in a guarded call because they may be secret. `Cluster.PLAYER_CAST_H` (16) tells `Indicators.lua` how far to push the cooldown row, which pushes the button rows and the ammo block, since they follow `Hunter.playerWidgetsBottom`. `EXTRA_H` rises to 58 for the extra height. Blizzard's `PlayerCastingBarFrame` hides with the other default frames when that setting is on. The pet side is unchanged.
+- **Alternatives considered:** Putting the cast bar inside the unit frame by making it taller.
+- **Requirement IDs affected:** CLU-06, CLU-19, HUN-18

@@ -1,6 +1,6 @@
 local addonName, ns = ...
 
--- Hunter part: your Essential Cooldowns in the player area, to the right of the ammo widget (SDD HUN-18).
+-- Hunter part: your Essential Cooldowns in the player area, one row under the unit frame, the whole width of the area (SDD HUN-18).
 -- Blizzard's own Essential Cooldowns frame cannot be moved into the cluster (the client hides its position from
 -- addons), so this draws a row of small icons from the same list. The list comes from the Cooldown Manager, so
 -- the spells you pick there in its settings are the ones shown here. Icons have a cooldown swipe and a tooltip.
@@ -9,7 +9,7 @@ local Hunter = ns.Hunter
 local Cooldowns = {}
 Hunter:AddPart("Cooldowns", Cooldowns)
 
-local MAX_ICON, MIN_ICON = 22, 14
+local MAX_ICON, MIN_ICON = 30, 14
 local GAP = 2
 local MAX_SHOWN = 10
 
@@ -129,17 +129,18 @@ end
 
 local function Build(container, areas)
     local rect = areas.player
-    local ammo = Hunter.ammoRect -- set by Indicators.lua
-    local left = ammo and (ammo.x + ammo.width + 4) or (rect[1] + 104)
-    local top = ammo and ammo.y or (rect[2] + ns.Cluster.UNIT_FRAME_HEIGHT + 6)
-    local width = rect[1] + rect[3] - left
+    local row = Hunter.cooldownRect -- set by Indicators.lua: the row under the ammo widget, the area's full width
+    local left = row and row.x or rect[1]
+    local top = row and row.y or (rect[2] + ns.Cluster.UNIT_FRAME_HEIGHT + 6)
+    local width = row and row.width or rect[3]
+    local height = row and row.height or MAX_ICON
 
     -- Our row replaces Blizzard's frame, so it is hidden along with the other default frames when that is on.
     ns.Cluster:ReplaceDefaultFrame("EssentialCooldownViewer")
 
     holder = CreateFrame("Frame", "GGGUIManagerHunterCooldowns", container)
     holder:SetPoint("TOPLEFT", container, "TOPLEFT", left, -top)
-    holder:SetSize(width, ammo and ammo.height or MAX_ICON)
+    holder:SetSize(width, height)
 
     local events = CreateFrame("Frame")
     for _, event in ipairs({ "PLAYER_ENTERING_WORLD", "SPELLS_CHANGED", "PLAYER_SPECIALIZATION_CHANGED",

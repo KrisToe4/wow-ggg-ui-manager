@@ -1,19 +1,18 @@
 local addonName, ns = ...
 
--- Hunter part: experimental widgets in the player area of the Cluster (SDD HUN-11 to HUN-14, step 8).
--- This is R&D. The look and the bands will change as it is tried in the game.
+-- Hunter part: the ammo block beside the Feign Death button, and the range and shot timer measuring (SDD HUN-11 to HUN-14, HUN-17, HUN-19).
+-- The range bar and the shot glow that used to be drawn in the player area are gone. They live on the target nameplate (Nameplates.lua).
 --   an ammo indicator   the equipped ammo's icon and the total count, yellow when low and red when critical
---   a range indicator   four bands from near to far, with the one the target is in lit
+--   range and shot timing   measured in the background and handed to the nameplate bar
 --   /ggg hunter range   prints every range measurement the client gives for the target
 
 local Hunter = ns.Hunter
 local Indicators = {}
 Hunter:AddPart("Indicators", Indicators)
 
-local WIDGET_GAP = 4
-local AMMO_H = 22
-local AMMO_WIDTH = 96
-local RANGE_H = 20
+local AMMO_W = 34 -- the ammo block beside Feign Death: icon on top, count under it
+Hunter.AMMO_W = AMMO_W
+local COOLDOWN_H = 30 -- the essential cooldowns row, under the unit frame
 local TICK = 0.1 -- seconds between range checks (INV-05)
 
 local MELEE_SPELL_ID = 2974 -- Raptor Strike
@@ -116,7 +115,6 @@ end
 -- Widgets
 ---------------------------------------------------------------------
 local ammoFrame, ammoIcon, ammoText
-local segments = {}
 
 local function UpdateAmmo()
     if not ammoFrame then return end
@@ -140,7 +138,7 @@ local function UpdateAmmo()
     else
         ammoIcon:SetTexture("Interface\\Icons\\INV_Misc_QuestionMark")
         ammoIcon:SetDesaturated(true)
-        ammoText:SetText("No ammo")
+        ammoText:SetText("0")
     end
     if level >= 2 then
         ammoText:SetTextColor(1, 0.2, 0.2)
@@ -151,26 +149,20 @@ local function UpdateAmmo()
     end
 end
 
+-- The range is measured in the background for the nameplate bar (HUN-19). Nothing is drawn here any more.
 local function UpdateRange()
-    local band = CurrentBand()
-    Hunter.bandNow = band -- read by the nameplate bar, so it makes no range checks of its own (HUN-19)
-    for index, segment in ipairs(segments) do
-        local colour = BANDS[index].colour
-        if band == index then
-            segment.fill:SetColorTexture(colour[1], colour[2], colour[3], 0.95)
-            segment.text:SetTextColor(1, 1, 1)
-        else
-            segment.fill:SetColorTexture(colour[1], colour[2], colour[3], band and 0.2 or 0.1)
-            segment.text:SetTextColor(0.7, 0.7, 0.7)
-        end
+    local nameplate = Hunter.settings and Hunter.settings.nameplate
+    if nameplate and nameplate.enabled == false then
+        Hunter.bandNow = nil -- nobody reads the band, so no range checks are made
+        return
     end
+    Hunter.bandNow = CurrentBand() -- read by the nameplate bar, so it makes no range checks of its own
 end
 
 -- Shot timer state (HUN-17)
 local autoRepeat = false -- Auto Shot is switched on
 local shotStart          -- when the last Auto Shot went off
 local shotGap            -- seconds between the last two shots, measured (the real speed is secret)
-local SHOT_TICK = 0.03   -- the glow is redrawn about 30 times a second while Auto Shot is on
 
 -- The shot timer state, for the nameplate bar: Auto Shot on, when the last shot went off, the measured gap.
 function Hunter.ShotState() return autoRepeat, shotStart, shotGap end
@@ -179,92 +171,40 @@ local function Build(container, areas)
     local Cluster = ns.Cluster
     local rect = areas.player
     local width = rect[3]
-    local y = rect[2] + Cluster.UNIT_FRAME_HEIGHT + 6
+    local y = rect[2] + Cluster.UNIT_FRAME_HEIGHT + (Cluster.PLAYER_CAST_H or 0) + 6 -- under the player cast bar
 
+    -- The essential cooldowns (Cooldowns.lua) take the row under the unit frame, the whole width of the area.
+    Hunter.cooldownRect = { x = rect[1], y = y, width = width, height = COOLDOWN_H }
+    Hunter.playerWidgetsBottom = y + COOLDOWN_H -- where the button rows start (Buttons.lua)
+
+    -- The ammo block sits beside the Feign Death button, as tall as its three rows: the icon on top, the count under
+    -- it. The sizes of the rows and of Feign Death come from Buttons.lua, which is loaded before the Cluster is built.
+    local feignWidth, rowGap = Hunter.FEIGN_W or 46, Hunter.ROW_GAP or 4
+    local blockHeight = Hunter.THREE_ROWS_H or 74
     ammoFrame = CreateFrame("Frame", "GGGUIManagerHunterAmmo", container)
-    ammoFrame:SetPoint("TOPLEFT", container, "TOPLEFT", rect[1], -y)
-    ammoFrame:SetSize(AMMO_WIDTH, AMMO_H) -- the rest of the row is for the essential cooldowns (Cooldowns.lua)
-    Hunter.ammoRect = { x = rect[1], y = y, width = AMMO_WIDTH, height = AMMO_H }
+    ammoFrame:SetPoint("TOPLEFT", container, "TOPLEFT", rect[1] + width - feignWidth - 2 - AMMO_W,
+        -(Hunter.playerWidgetsBottom + rowGap))
+    ammoFrame:SetSize(AMMO_W, blockHeight)
+    local back = ammoFrame:CreateTexture(nil, "BACKGROUND")
+    back:SetAllPoints()
+    back:SetColorTexture(0, 0, 0, 0.6)
     ammoIcon = ammoFrame:CreateTexture(nil, "ARTWORK")
-    ammoIcon:SetSize(AMMO_H - 2, AMMO_H - 2)
-    ammoIcon:SetPoint("LEFT", ammoFrame, "LEFT", 1, 0)
+    ammoIcon:SetSize(AMMO_W - 2, AMMO_W - 2)
+    ammoIcon:SetPoint("TOP", ammoFrame, "TOP", 0, -1)
     ammoIcon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
-    ammoText = ammoFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    ammoText:SetPoint("LEFT", ammoIcon, "RIGHT", 6, 0)
+    ammoText = ammoFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    ammoText:SetPoint("TOP", ammoIcon, "BOTTOM", 0, -4)
 
-    Hunter.playerWidgetsBottom = y + AMMO_H + WIDGET_GAP + RANGE_H -- where the button rows start (Buttons.lua)
-
-    local rangeFrame = CreateFrame("Frame", "GGGUIManagerHunterRange", container)
-    rangeFrame:SetPoint("TOPLEFT", container, "TOPLEFT", rect[1], -(y + AMMO_H + WIDGET_GAP))
-    rangeFrame:SetSize(width, RANGE_H)
-    local gap = 1
-    local segmentWidth = (width - gap * (#BANDS - 1)) / #BANDS
-    for index, band in ipairs(BANDS) do
-        local segment = CreateFrame("Frame", nil, rangeFrame)
-        segment:SetSize(segmentWidth, RANGE_H)
-        segment:SetPoint("TOPLEFT", rangeFrame, "TOPLEFT", (index - 1) * (segmentWidth + gap), 0)
-        segment.fill = segment:CreateTexture(nil, "BACKGROUND")
-        segment.fill:SetAllPoints()
-        segment.text = segment:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-        segment.text:SetPoint("CENTER")
-        segment.text:SetText(band.label)
-        segments[index] = segment
-    end
-
+    -- The range is measured about ten times a second for the nameplate bar. This frame only carries the timer.
+    local ticker = CreateFrame("Frame", "GGGUIManagerHunterRange", container)
     local elapsed = 0
-    rangeFrame:SetScript("OnUpdate", function(_, dt)
+    ticker:SetScript("OnUpdate", function(_, dt)
         elapsed = elapsed + dt
         if elapsed >= TICK then
             elapsed = 0
             if Hunter.active then pcall(UpdateRange) end
         end
     end)
-
-    -- Shot timer (HUN-17): a glow that sweeps over the range bar from left to right between two Auto Shots.
-    -- Your ranged speed is a hidden "secret" number, so it is only handed to a status bar, never compared (D-013).
-    local glowFrame = CreateFrame("StatusBar", nil, rangeFrame)
-    glowFrame:SetAllPoints()
-    glowFrame:SetFrameLevel(rangeFrame:GetFrameLevel() + 10)
-    glowFrame:SetStatusBarTexture("Interface\\Buttons\\WHITE8X8")
-    glowFrame:SetStatusBarColor(0.5, 0.8, 1, 0.35)
-    glowFrame:GetStatusBarTexture():SetBlendMode("ADD")
-    glowFrame:SetMinMaxValues(0, 1)
-    glowFrame:SetValue(1)
-    local spark = glowFrame:CreateTexture(nil, "OVERLAY")
-    spark:SetSize(3, RANGE_H)
-    spark:SetBlendMode("ADD")
-    spark:SetColorTexture(1, 1, 1, 0.9)
-    spark:SetPoint("CENTER", glowFrame:GetStatusBarTexture(), "RIGHT", 0, 0)
-    glowFrame:Hide()
-
-    local function ShowShotProgress()
-        if not autoRepeat then
-            glowFrame:Hide()
-            return
-        end
-        local ready = true
-        if shotStart then
-            local elapsedShot = GetTime() - shotStart
-            glowFrame:SetValue(elapsedShot) -- the bar clamps this to the full length
-            -- Whether the shot is ready is only known once two shots have measured the gap between them.
-            ready = shotGap ~= nil and elapsedShot >= shotGap
-        else
-            glowFrame:SetMinMaxValues(0, 1)
-            glowFrame:SetValue(1)
-        end
-        spark:SetShown(not ready)
-        glowFrame:Show()
-    end
-
-    local shotElapsed = 0
-    glowFrame:SetScript("OnUpdate", function(_, dt)
-        shotElapsed = shotElapsed + dt
-        if shotElapsed >= SHOT_TICK then
-            shotElapsed = 0
-            if Hunter.active then pcall(ShowShotProgress) end
-        end
-    end)
-    glowFrame:SetScript("OnShow", function() shotElapsed = SHOT_TICK end)
 
     local events = CreateFrame("Frame")
     for _, event in ipairs({ "BAG_UPDATE_DELAYED", "PLAYER_EQUIPMENT_CHANGED", "PLAYER_ENTERING_WORLD",
@@ -276,11 +216,9 @@ local function Build(container, areas)
         if not Hunter.active then return end
         if event == "START_AUTOREPEAT_SPELL" then
             autoRepeat = true
-            pcall(ShowShotProgress)
         elseif event == "STOP_AUTOREPEAT_SPELL" then
             autoRepeat = false
             shotStart, shotGap = nil, nil
-            pcall(ShowShotProgress)
         elseif event == "UNIT_SPELLCAST_SUCCEEDED" then
             -- Each Auto Shot starts a new sweep as long as your ranged speed.
             local ok, isAutoShot = pcall(function() return spellID == AUTO_SHOT_ID end)
@@ -289,13 +227,8 @@ local function Build(container, areas)
                 -- The time since the last shot, when it is a believable gap, is the measured speed.
                 shotGap = (shotStart and now - shotStart < 8) and (now - shotStart) or nil
                 shotStart = now
+                -- The speed is a secret value, so it is only ever handed to status bars (D-013).
                 local okSpeed, speed = pcall(UnitRangedDamage, "player")
-                if okSpeed and speed then
-                    pcall(glowFrame.SetMinMaxValues, glowFrame, 0, speed) -- a secret value is fine here
-                elseif shotGap then
-                    glowFrame:SetMinMaxValues(0, shotGap)
-                end
-                glowFrame:SetValue(0)
                 for _, bar in ipairs(Hunter.shotBars) do
                     if okSpeed and speed then
                         pcall(bar.SetMinMaxValues, bar, 0, speed)

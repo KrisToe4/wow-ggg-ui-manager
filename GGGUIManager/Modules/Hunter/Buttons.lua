@@ -1,7 +1,7 @@
 local addonName, ns = ...
 
 -- Hunter part: spell buttons in the Cluster (SDD HUN-15, HUN-16).
---   Aspects, Tracking and Traps: three rows of buttons in the player area, under the range indicator (HUN-15)
+--   Aspects, Tracking and Traps: three rows of buttons in the player area, under the essential cooldowns row (HUN-15)
 --   Pet action row                in the pet area, under the pet bar
 -- Each button is a secure "spell" button, so clicking works in combat without addon code. Only the spells the
 -- character knows are shown. Showing and hiding buttons is a protected change, so it only happens out of combat.
@@ -25,6 +25,8 @@ local PET_BIG = { "Call Pet", "Mend Pet", "Beast Training" }
 local BIG_H = 30
 local FEIGN = { "Feign Death" }
 local FEIGN_W = 46 -- a tall button at the right of the three rows, easy to hit
+Hunter.FEIGN_W, Hunter.ROW_GAP = FEIGN_W, ROW_GAP -- the ammo block (Indicators.lua) sits beside Feign Death
+Hunter.THREE_ROWS_H = SIZE * 3 + ROW_GAP * 2
 local PET_TARGET = { ["Mend Pet"] = "pet" } -- the unit the spell is cast on, when it is not the current target
 
 local rows = {}
@@ -199,9 +201,9 @@ local function Build(container, areas)
     local Cluster = ns.Cluster
     local player, pet = areas.player, areas.pet
 
-    local top = Hunter.playerWidgetsBottom or (player[2] + Cluster.UNIT_FRAME_HEIGHT + 6 + 22 + 4 + 20)
+    local top = Hunter.playerWidgetsBottom or (player[2] + Cluster.UNIT_FRAME_HEIGHT + 6 + 30)
     local rowStep = SIZE + ROW_GAP
-    local rowWidth = player[3] - FEIGN_W - GAP * 2 -- the rows leave the right side for Feign Death
+    local rowWidth = player[3] - FEIGN_W - (Hunter.AMMO_W or 0) - GAP * 3 -- the rows leave the right side for the ammo block and Feign Death
     BuildRow(container, "Aspects", "aspect", player[1], top + ROW_GAP, rowWidth, ASPECTS)
     BuildRow(container, "Tracking", "tracking", player[1], top + ROW_GAP + rowStep, rowWidth, TRACKING)
     BuildRow(container, "Traps", "trap", player[1], top + ROW_GAP + rowStep * 2, rowWidth, TRAPS)
