@@ -3,13 +3,13 @@
 
 | | |
 |---|---|
-| **Version** | 0.16 (draft) |
-| **Supersedes** | 0.15 |
+| **Version** | 0.18 (draft) |
+| **Supersedes** | 0.17 |
 | **Audience** | LLM-based coding agents and human reviewers |
 | **Platform** | World of Warcraft addon, Lua 5.1, client "WoW Forever" (Interface 16001) |
 | **Addon folder** | `GGGUIManager/` |
-| **Saved variables** | `GGGUIManagerDB` |
-| **Slash commands** | `/ggg`, `/gggui` |
+| **Saved variables** | `GGGUIManagerDB`, and `BagBuddyDB` for a one-time import only (BAG-04) |
+| **Slash commands** | `/ggg`, `/gggui`, and `/bb`, `/bagbuddy` for the Bags module (BAG-09) |
 | **Tests** | Plain Lua test runner outside the game, for pure logic (section 9) |
 
 ---
@@ -29,6 +29,8 @@ This SDD is applied **one step at a time** (section 10). After every step the hu
 
 | Version | Change | Reason |
 |---|---|---|
+| 0.18 | Catch-up of work built since 0.16: sixth module Layers, a probe (section 7.6, step 20). Player area rework (step 19): player cast bar (CLU-26), essential cooldowns row (HUN-18), ammo block beside Feign Death (HUN-11), range bar and shot glow only on the nameplate (HUN-12, HUN-17, HUN-19), Hunter button rows narrower (HUN-15), CLU-19 height. Camp toy button (CMP-13, CMP-14) | The SDD had fallen behind the code. HUN-17 and HUN-18 were referred to but never written. Decisions D-031 to D-036 |
+| 0.17 | Fifth module, Bags (section 7.5): the BagBuddy addon converted into a module, step 18. INV-02, INV-03, CMD-01, STR-03 note, sections 1.4 and 13 updated | The human asked to turn BagBuddy into a module and keep it essentially the same (D-037) |
 | 0.16 | Feign Death button added to the Hunter button area (HUN-15) and a range and shot timer bar on the target's nameplate (HUN-19, step 17) | The human wants an easy-to-hit Feign Death button and the range and shot timers on the enemy nameplate |
 | 0.15 | Hunter button area: aspects and tracking become one area of two rows and a third row of traps is added: HUN-15, HUN-16, CLU-19, step 16 | The human wants aspects and tracking combined and a traps area in the player cluster |
 | 0.14 | Camp moves out of the player area into its own area, two buttons wide, between action bar 2 and the player area: CLU-03, CLU-19, CLU-25, CMP-02, CMP-06, CMP-10, step 15 | The human wants the camping buttons in their own place beside the player area. The player area gets its extra row back |
@@ -93,7 +95,7 @@ These are settled by the human.
 3. Frame sizes and the total width of the cluster. Step 2 uses defaults that the human adjusts after seeing them (CLU-03).
 4. Does the cluster show for every class? It does by default. The pet parts only show while there is a pet (CLU-08).
 5. This client hides some values from addons as "secret" values (D-009). Which unit values (health, power, names) can addon code read in and out of combat? Step 2 finds out in the game (CLU-12).
-6. Which of the remaining personal addons (BagBuddy, FriendBook, others) should eventually fold into this one as modules, if any? HunterKit is done (section 7.2).
+6. Which of the remaining personal addons (FriendBook, others) should eventually fold into this one as modules, if any? HunterKit is done (section 7.2) and BagBuddy is done (section 7.5).
 7. Is a licence needed for the repository, and is it public or private?
 
 ---
@@ -103,8 +105,8 @@ These are settled by the human.
 These rules apply to every step and every file. They are stated once here and other sections refer to them by ID. Several come from problems met in earlier personal addons.
 
 - **INV-01** The addon shall never change a protected frame in combat. This includes Show, Hide, SetPoint, SetAttribute and similar calls on protected frames or on frames that have protected children. Work that cannot run in combat is queued and runs on `PLAYER_REGEN_ENABLED`.
-- **INV-02** The addon shall not taint Blizzard code. It never replaces or overwrites Blizzard functions or secure scripts, never assigns Blizzard functions as scripts on its own frames, and uses `hooksecurefunc` for observation. Anything that acts on protected actions goes through secure templates.
-- **INV-03** The addon creates exactly two kinds of globals: the saved variable `GGGUIManagerDB` and the slash command registrations. Everything else is local or lives in the shared `ns` table. Named frames use the `GGGUIManager` prefix.
+- **INV-02** The addon shall not taint Blizzard code. It never replaces or overwrites Blizzard functions or secure scripts, never assigns Blizzard functions as scripts on its own frames, and uses `hooksecurefunc` for observation. Anything that acts on protected actions goes through secure templates. The one exception is the Bags module, which replaces Blizzard's bag open and close functions (BAG-06, D-037).
+- **INV-03** The addon creates exactly two kinds of globals: the saved variable `GGGUIManagerDB` and the slash command registrations. Everything else is local or lives in the shared `ns` table. Named frames use the `GGGUIManager` prefix. The one other global is `BagBuddyDB`, listed only so the Bags module can import old settings (BAG-04).
 - **INV-04** Saved data is read only after `ADDON_LOADED` for this addon. Defaults are merged without overwriting the user's values. Every change to the saved shape bumps `schemaVersion` and adds a migration (section 6).
 - **INV-05** No work runs every frame unless it is throttled. Any `OnUpdate` handler accumulates elapsed time and acts at a fixed interval.
 - **INV-06** Memory use is bounded. Caches, histories and queues have a size limit.
@@ -133,6 +135,8 @@ These rules apply to every step and every file. They are stated once here and ot
     ├── Core.lua                       (shell: saved data, module registry, slash command)
     └── Modules/
         ├── Hunter/                    (second module, section 7.2: Hunter.lua, Ammo.lua, Pet.lua, DeadZone.lua, Macros.lua)
+        ├── Layers/                    (sixth module, section 7.6: Probe.lua)
+        ├── Bags/                      (fifth module, section 7.5: Bags.lua, Window.lua, Filters.lua, Pinned.lua, SellList.lua, NewItems.lua)
         └── Cluster/                   (first module, section 7.1; one file per part, added step by step)
             ├── Cluster.lua            (module registration, container, layout)
             ├── PlayerFrame.lua        (added in step 2)
@@ -243,7 +247,7 @@ The first module. It replaces the default player frame, pet frame, pet bar, part
 
 ### Parts
 
-- **CLU-06** Player frame: the player's name, health and power, built on a secure unit button for `player` so that clicking and the right-click menu work (INV-02). More information is added when the human lists it (section 1.4, question 1).
+- **CLU-06** Player frame: the player's name, health and power, built on a secure unit button for `player` so that clicking and the right-click menu work (INV-02). More information is added when the human lists it (section 1.4, question 1). Under the unit frame sits the player's cast bar (CLU-26).
 - **CLU-07** Pet frame: the same for `pet`. The pet's happiness and other information are added when the human lists them.
 - **CLU-08** The pet frame and the pet bar are shown only while the player has a pet, and the container does not move when they appear or disappear.
 - **CLU-09** Pet bar: the pet's ten action slots, built on secure action buttons of the game's `pet` action type, in one row under the pet frame inside the inner right area. Each button shows the action's icon, its cooldown, a highlight while the action is active (for example the current stance) and a small mark when auto-cast is allowed or on. Left-click uses the action, right-click toggles auto-cast, and hovering shows the game's tooltip for the action.
@@ -255,6 +259,7 @@ The first module. It replaces the default player frame, pet frame, pet bar, part
 - **CLU-23** Each frame shows the unit's name, a health bar with the health text, and one small line such as `Level 25 Elite Beast` for a creature or `Level 60 Hunter` for a player, with `??` for a level the game reports as -1. The bar is red for an enemy and green otherwise. Health and names are passed straight to the bar and text (CLU-12). The small line is built only from values that are readable, and the parts that are not are left out. Updates come from unit events (INV-05).
 - **CLU-24** The default `TargetFrame` and `FocusFrame` are hidden under CLU-15. Their target of target frames are their children and go with them.
 - **CLU-25** Camp area: a column two buttons wide and as tall as the main area, between action bar 2 and the player area. It is an area of Cluster named `camp`, and the Camp module fills it (CMP-02). The area is 46 px wide (two 22 px buttons and a 2 px gap) and about 154 px high, which holds 6 rows of 22 px buttons.
+- **CLU-26** Player cast bar: part of the `PlayerFrame` part, a 14 px high bar the full width of the player area, 2 px under the unit frame (so under the power bar). It shows the spell name on the left and the seconds left on the right, gold for a cast and blue for a channel, and fills as the cast goes (a channel empties). It listens to the player's cast events (start, stop, failed, interrupted, delayed and the channel events) and moves its fill only while a cast shows. Cast times are read in a guarded call, and a value the game hides as a secret value (CLU-12) leaves the bar hidden. It is a plain frame, so it works in combat. Blizzard's `PlayerCastingBarFrame` is in the hide list under CLU-15. `Cluster.PLAYER_CAST_H` (16 px, the bar and its gap) tells the Hunter parts how far to move down (HUN-18).
 - **CLU-11** Action bars 1 to 4: secure action buttons of the `action` type bound to the same action slots as Blizzard's bars, so the same abilities and macros show. Each bar is a grid of 3 columns and 4 rows, numbered across and then down:
 
   ```text
@@ -266,7 +271,7 @@ The first module. It replaces the default player frame, pet frame, pet bar, part
 
   The bars sit side by side: bars 1 and 2 on the outer left (bar 1 outermost) and bars 3 and 4 on the outer right (bar 4 outermost). The slots are Blizzard's: bar 1 is slots 1 to 12, bar 2 (the bottom left bar) is 61 to 72, bar 3 (the bottom right bar) is 49 to 60 and bar 4 (the right bar) is 25 to 36. Bar 1 does not page in this version, so it always shows slots 1 to 12 and does not change for forms, stealth, stances or vehicles.
 - **CLU-18** Cluster tells other modules when it is built. `Cluster:OnBuilt(func)` calls `func(container, areas)` once the container and the parts exist, or at once if they already do. Other modules use it to place widgets in the free space of an area, for example the Hunter widgets under the player frame (HUN-14). The widgets are not secure frames, so they can change in combat.
-- **CLU-19** Cluster exposes the next free row of the player area: `areas.player.nextY` holds the offset under the last widget row placed there, and a module that adds a row reads it and then advances it by the row height and gap. Camp no longer uses it (CLU-25). The main area is the height of the action bars plus 58 px for the three Hunter button rows (HUN-15).
+- **CLU-19** Cluster exposes the next free row of the player area: `areas.player.nextY` holds the offset under the last widget row placed there, and a module that adds a row reads it and then advances it by the row height and gap. Camp no longer uses it (CLU-25). The main area is the height of the action bars plus 58 px, which holds the player cast bar (CLU-26), the cooldown row and the three Hunter button rows (HUN-15, HUN-18).
 - **CLU-17** Each action button shows the icon, the cooldown, the item count or charges, the key binding text, the macro name, grey when the action is unusable, red when the target is out of range, and the game's tooltip. Cooldown and count values may be hidden "secret" values in combat, so cooldowns are set from the game's duration object and counts as text without comparing them (CLU-12). Proc glow, equipped and active borders and spell flyouts come in step 7. Key bindings stay on the game's own bar commands, so the keys keep working and the new buttons only show the key text. Dragging actions onto and off the new buttons is not part of this version.
 
 ### Behaviour that applies to every part
@@ -300,15 +305,17 @@ The second module. It is the HunterKit addon converted into a module. It is for 
 
 These are an experiment. How they look and work will change as the human tries them, so the requirements are deliberately loose and the step is repeated until the human is happy (section 10, step 8).
 
-- **HUN-11** Ammo indicator: a small widget in the player area of the Cluster showing the equipped ammo's icon (taken from the equipped slot) and the total count, coloured normal, yellow at the low level and red at the critical level or when none is left (HUN-02). It updates on the same events as the ammo alert. It is shown only for a Hunter with a ranged weapon.
-- **HUN-12** Range indicator: a widget in the player area that shows how far the current target is, in bands that change as the player moves closer or further away. It has nine blocks from near to far: melee (M), dead zone (D), 10, 15, 20, 25, 30 and 35 yards, and the edge of shooting range (Max). The block the target is in is lit and past Max every block is dim. With no attackable target it is dim. The yard bands come from `C_Item.IsItemInRange` with items of known use range. Raptor Strike counts as melee only when Auto Shot is out of range, because Raptor Strike reports "in range" at every distance on this client. The dead zone is shown when the target is inside about 20 yards and Auto Shot refuses to fire. It checks at most 10 times a second (INV-05). The bands and the look are expected to change.
+- **HUN-11** Ammo indicator: a block 34 px wide and as tall as the three button rows (74 px), in the player area directly left of the Feign Death button (HUN-15). The equipped ammo's icon (taken from the equipped slot) is at the top and the total count is under it, coloured normal, yellow at the low level and red at the critical level or when none is left (HUN-02). With no ammo the count reads 0 and the icon is a grey question mark. It updates on the same events as the ammo alert. It is shown only for a Hunter with a ranged weapon.
+- **HUN-12** Range indicator: how far the current target is, in bands that change as the player moves closer or further away. It is no longer drawn in the player area. The measurement runs on a plain frame about ten times a second and its result (`Hunter.bandNow`) is shown by the nameplate bar (HUN-19). The check is skipped while the nameplate bar is off. It has nine blocks from near to far: melee (M), dead zone (D), 10, 15, 20, 25, 30 and 35 yards, and the edge of shooting range (Max). The block the target is in is lit and past Max every block is dim. With no attackable target it is dim. The yard bands come from `C_Item.IsItemInRange` with items of known use range. Raptor Strike counts as melee only when Auto Shot is out of range, because Raptor Strike reports "in range" at every distance on this client. The dead zone is shown when the target is inside about 20 yards and Auto Shot refuses to fire. It checks at most 10 times a second (INV-05). The bands and the look are expected to change.
 - **HUN-13** Range probe: `/ggg hunter range` prints every range measurement the client offers for the current target, so the human can stand at different distances and report which measurements change. It lists the interact distance checks, the item range ladder, Raptor Strike and Auto Shot by spell ID, the range of several hunter spells with their minimum and maximum range from the spell data, and the unit distance call if the client has it.
 - **HUN-14** The widgets are placed by the Hunter module inside the Cluster container, in the free space under the player frame (CLU-18). If Cluster is off or not built, the widgets are not shown.
 
-- **HUN-15** Hunter button area: under the range indicator in the player area, three rows of 22 px secure spell buttons, each growing from the left. Row one is the aspects (Hawk, Monkey, Cheetah, Pack, Wild, Beast, Viper, Wolf, Dragonhawk), row two is the tracking spells (Track Beasts, Humanoids, Hidden, Elementals, Undead, Demons, Giants, Dragonkin) and row three is the traps (Freezing Trap, Immolation Trap, Frost Trap, Explosive Trap, Snake Trap). Only spells the character knows are shown, and a spell the client does not have is skipped. Clicking works in combat, and showing or hiding a button happens out of combat only (INV-01). Each button shows the cooldown and the game's tooltip. The aspect that is on and the tracking that is on are tinted green. Traps have no tint. A tall Feign Death button, 46 px wide and as high as the three rows, sits at the right of them, so each row is 190 px wide, and it is tinted green while the player is feigning. `/ggg hunter buttons` lists which spell names the game found and which it did not.
+- **HUN-15** Hunter button area: under the essential cooldowns row (HUN-18) in the player area, three rows of 22 px secure spell buttons, each growing from the left. Row one is the aspects (Hawk, Monkey, Cheetah, Pack, Wild, Beast, Viper, Wolf, Dragonhawk), row two is the tracking spells (Track Beasts, Humanoids, Hidden, Elementals, Undead, Demons, Giants, Dragonkin) and row three is the traps (Freezing Trap, Immolation Trap, Frost Trap, Explosive Trap, Snake Trap). Only spells the character knows are shown, and a spell the client does not have is skipped. Clicking works in combat, and showing or hiding a button happens out of combat only (INV-01). Each button shows the cooldown and the game's tooltip. The aspect that is on and the tracking that is on are tinted green. Traps have no tint. A tall Feign Death button, 46 px wide and as high as the three rows, sits at the right of them and the ammo block (HUN-11) sits left of it, so each row is 154 px wide and holds six buttons. Feign Death is tinted green while the player is feigning. `/ggg hunter buttons` lists which spell names the game found and which it did not.
 - **HUN-16** Pet buttons: in the pet area under the pet bar, a row of 22 px buttons (Revive Pet, Dismiss Pet, Feed Pet, Tame Beast, Beast Lore) and a row of three wide buttons (Call Pet, Mend Pet, Beast Training) in fixed slots. Mend Pet is cast on the pet. The same rules as HUN-15 apply.
 
-- **HUN-19** Nameplate bar: while the current target can be attacked and its nameplate is shown, a small copy of the range bar (HUN-12) is shown under the health bar of that nameplate, on Blizzard's own nameplates. It is about 98 px wide and 6 px high with no text. The block for the target's band is lit and the shot timer glow (HUN-17) sweeps across it. The band is the one the player-area range bar measured last, so no extra range checks are made. The bar is a child of the nameplate, anchored to its health bar, and addon code only reads the nameplate's fields and never writes to them (INV-02). A nameplate the game marks as forbidden is skipped. `/ggg hunter nameplate on|off` turns it on or off, and it is on by default.
+- **HUN-17** Shot timer: while Auto Shot is on (the game's start and stop auto-repeat events), a glow sweeps across the range bar from empty to full over one shot, and a spark marks its edge until the next shot is ready. Each Auto Shot that goes off (spell ID 75, on the player's successful cast event) restarts the sweep. The sweep length is the player's ranged speed handed straight to the bar, because the speed is a secret value (CLU-12), and when that fails it is the measured gap between the last two shots. The glow is drawn only on the nameplate bar (HUN-19). `Indicators.lua` keeps the state and shares it through `Hunter.ShotState()` and the list `Hunter.shotBars`.
+- **HUN-18** Essential cooldowns row: the spells of the Cooldown Manager's Essential section, shown as one row of icons under the player cast bar (CLU-26), the full width of the player area and 30 px high. Icons are up to 30 px and shrink to 14 px to fit, with at most 10 shown. The list is read only through the game's `C_CooldownViewer` functions (the Essential category and each cooldown's info), so the spells picked in the Cooldown Manager's settings are the ones shown, and an invisible or unknown spell is skipped. Calling the viewer frame's own methods is not done, because that tainted the Tracked Buffs viewer (D-029). Each icon has a cooldown swipe set from the game's duration object and the game's spell tooltip on hover. The row is rebuilt on the Cooldown Manager and spell events and the swipes update on cooldown events. It is plain frames, so it works in combat. Blizzard's `EssentialCooldownViewer` is in the hide list under CLU-15. `/ggg hunter cooldowns` prints the list and the icons shown.
+- **HUN-19** Nameplate bar: while the current target can be attacked and its nameplate is shown, a small range bar is shown on that nameplate, on Blizzard's own nameplates. It is about 98 px wide and 6 px high with no text. It hangs 2 px under the nameplate's cast bar (a hidden cast bar keeps its place, so the bar does not jump when a cast starts), and 16 px under the health bar when the nameplate has no cast bar. The block for the target's band (`Hunter.bandNow`, HUN-12) is lit and the shot timer glow (HUN-17) sweeps across it. No extra range checks are made. The bar is a child of the nameplate and addon code only reads the nameplate's fields and never writes to them (INV-02). A nameplate the game marks as forbidden is skipped. `/ggg hunter nameplate on|off` turns it on or off, and it is on by default.
 **Saved data** (`ns.db.modules.Hunter`):
 
 ```text
@@ -329,11 +336,12 @@ The third module. It puts the camping and resting items in one row of buttons un
 
 - **CMP-01** The module is registered as `Camp` with no `classes` field, so it is for every class (MOD-06). Its frames use the `GGGUIManagerCamp` name prefix (INV-03).
 - **CMP-02** The module places itself through `Cluster:OnBuilt` (CLU-18), in the Camp area of Cluster (CLU-25). If Cluster is off or not built, the buttons are not shown.
-- **CMP-13** The buttons are in a grid two wide, numbered across and then down. The first four slots are the Hearthstone, the Cozy Sleeping Bag, the drink and the food, in that order. The campsite objects follow in the order of the list. A slot with no item is left empty, so the fixed buttons always keep the same place. The grid holds 12 buttons, so at most 8 campsite objects show.
+- **CMP-13** The buttons are in a grid two wide, numbered across and then down. The first five slots are the Hearthstone, the Cozy Sleeping Bag, the drink, the food and the toy (CMP-14), in that order. The campsite objects follow in the order of the list. A slot with no item is left empty, so the fixed buttons always keep the same place. The grid holds 12 buttons, so at most 7 campsite objects show.
+- **CMP-14** Toy button: shown while the player has the toy (`PlayerHasToy`), which is the "Pouch of Violet Dust" with item ID 289439. The ID was taken from the item's use during the human's play and is not confirmed against the game, so `/ggg camp` prints the game's own name for the ID. A toy is used from the toy box and not from the bags, so the button is a secure button of the `toy` type with that ID. The button is refreshed on the toy events. The same combat rules as CMP-10 apply.
 - **CMP-03** Every button is a secure item button (`type = "item"`, `item = <name>`, clicked on key up as in D-018), so clicking works in combat without addon code. A button shows the item's icon, its stack count and its cooldown, and the game's tooltip on hover.
 - **CMP-04** Hearthstone button: shown while a Hearthstone is in the bags. It uses the Hearthstone by name, so a different stone that replaces it still works if the name is added to the list in the file.
 - **CMP-05** Sleeping bag button: shown while the Cozy Sleeping Bag is in the bags.
-- **CMP-06** Campsite area: one button for each campfire and campsite object found in the bags, placed after the four fixed buttons, in the same grid, across and then down. The names come from a list at the top of the file: the Basic, Journeyman and Expert Campfires and the objects of each profession (Mana Well, Fermenter, Sharpening Wheel, Anvil, Fish Bowl, Camp Tent and the others from the camping guides). The list is edited when the human finds a name that is wrong or missing. Placing one is an item use that opens a ground targeting reticle (confirmed by the human), so the buttons use the item. An item counts when its ID is known, or its name is exactly an object's name, or the spell it casts is in the list. Item IDs seen in the game are in `docs/IDS.md`.
+- **CMP-06** Campsite area: one button for each campfire and campsite object found in the bags, placed after the five fixed buttons, in the same grid, across and then down. The names come from a list at the top of the file: the Basic, Journeyman and Expert Campfires and the objects of each profession (Mana Well, Fermenter, Sharpening Wheel, Anvil, Fish Bowl, Camp Tent and the others from the camping guides). The list is edited when the human finds a name that is wrong or missing. Placing one is an item use that opens a ground targeting reticle (confirmed by the human), so the buttons use the item. An item counts when its ID is known, or its name is exactly an object's name, or the spell it casts is in the list. Item IDs seen in the game are in `docs/IDS.md`.
 - **CMP-07** Food button: shown while the bags hold food. It uses the food with the highest required level. When several have the same level, the larger stack wins, so the stack that runs out last is used first.
 - **CMP-08** Drink button: the same for drink.
 - **CMP-09** Food and drink are items of the Food and Drink class. They are told apart by the words in the tooltip, "eating" for food and "drinking" for drink (confirmed in the game for food). Items that say both count as food, and a readable tooltip with neither word is left out, for example a transformation treat. If no tooltip text is readable, the spell the item casts ("Food" or "Drink") decides, and then whole words in the item's name. Required level comes from the item data. A value the game hides or does not return counts as level 0 and is never compared as a secret value (CLU-12).
@@ -363,9 +371,45 @@ The fourth module. It runs when the player logs in or reloads and, later, will c
 
 ---
 
+## 7.5 Module: Bags
+
+The fifth module. It is the BagBuddy addon turned into a module and kept essentially the same: one combined bag window in place of Blizzard's bags, with a bag filter window, items pinned to fixed backpack slots, a sell list and automatic junk selling. It is for every class. The code is in `Modules/Bags/`: `Bags.lua` (module, settings, junk selling, commands), `Window.lua` (the bag window), `Filters.lua`, `Pinned.lua`, `SellList.lua` and `NewItems.lua`.
+
+- **BAG-01** The module is registered as `Bags` with no `classes` field (MOD-06). Its frames use the `GGGUIManagerBags` name prefix (INV-03). `Init` reads the settings and `Enable` builds the window, takes over the bag keys and registers the events. Showing and hiding the window in combat follows BAG-05.
+- **BAG-02** The window is one combined grid of every bag the player has, 10 columns of 37 px slots with 5 px gaps (the sizes Blizzard uses), filled from the bottom right. It has a title, a search box that dims slots whose item name does not contain the text, a Sort button, a Filters button, a Pinned button, a Sell list button, the free slot count (green, yellow at 15 or fewer, red at 5 or fewer) and the player's money. It can be moved by dragging, and the position is saved. `/ggg bags reset` puts it back in the default spot. Escape closes it.
+- **BAG-03** Each slot is a secure item button, so right-click uses the item and a click while a spell waits for a target (Disenchant and the like) hands the item to the spell, both in combat. Shift, Ctrl and Alt clicks go through Blizzard's own click handling. Ctrl + Alt + left-click marks or unmarks the item for sale (BAG-08). New items glow blue until the player hovers over them, quest items glow green, items on the sell list show a small coin, and hovering a bag on the bag bar lights up that bag's slots. The new item memory is kept for each character and survives a reload (`NewItems.lua`).
+- **BAG-04** Settings are the module's saved data. The first time the module starts it copies the settings of the BagBuddy addon (`autoSell`, `hiddenBags`, `pinned`, `sellList`, `chars`, `bagPoint`) from `BagBuddyDB` once and records `imported = true`. `BagBuddyDB` is listed in the `.toc` as a saved variable so the game loads it while the BagBuddy addon is switched off. It is never changed by this addon.
+- **BAG-05** The window holds protected item buttons. A request to open or close it in combat is remembered and carried out when combat ends, except that the bag keys go through a hidden secure button whose click shows or hides the window, so they work in combat too. The buttons are laid out and kept up to date while the window is closed, so it can open in combat. Key bindings are updated after combat when they change in combat.
+- **BAG-06** The module replaces Blizzard's global functions that open and close bags (`ToggleAllBags`, `ToggleBackpack`, `ToggleBag`, `OpenAllBags`, `OpenBackpack`, `OpenBag`, `CloseAllBags`, `CloseBackpack`, `CloseBag`) and hides Blizzard's bag frames. This is an exception to INV-02, kept as BagBuddy did it and recorded in D-037. It is a known risk of taint and is to be revisited.
+- **BAG-07** Bag filters (Filters.lua) are the game's own bag filters for each bag (equipment, consumables, trade goods, junk, quest items, reagents), with two extra switches, "Skip when sorting" and "Don't sell junk", and one of the module's own, "Hide from view", which keeps a bag out of the combined window. The Sort button sorts the bags and then waits three seconds before pinned items are put back.
+- **BAG-08** Selling: at a vendor the module sells every grey item with a vendor value and every item on the sell list, in bags that are not marked "Don't sell junk". Auto-selling junk is a setting (`/ggg bags sell`). The sell list is edited by Ctrl + Alt + left-click on an item, by dropping an item on the Sell list window, or with `/ggg bags mark`. A pinned item cannot be put on the sell list. Pinned items (`Pinned.lua`) are kept in backpack slots 1, 2, 3 and on in the order the player chooses. The module moves one item toward its place whenever the bags change, out of combat, and stops after 40 moves in a row.
+- **BAG-09** `/ggg bags` with no argument opens or closes the window. Sub-commands are `filters`, `pinned`, `pin [item]`, `selllist`, `selllist print`, `mark [item]`, `junk`, `sell`, `reset` and `help`. `/bb` and `/bagbuddy` do the same as `/ggg bags`. They are registered only when the BagBuddy addon is not running.
+- **BAG-10** If the BagBuddy addon is loaded, the module prints one message and stays off, because both replace the same bag functions and keys. Turning the module off with the manager needs a `/reload` to bring Blizzard's bags back (MOD-03).
+
+**Saved data** (`ns.db.modules.Bags`): `{ enabled = true, imported = false, autoSell = true, hiddenBags = {}, pinned = {}, sellList = {}, chars = {}, bagPoint = { "BOTTOMRIGHT", "UIParent", "BOTTOMRIGHT", -90, 100 } }`.
+
+**Known limitations.** The replaced bag functions can taint Blizzard code (BAG-06). The item button handling depends on Blizzard's `ContainerFrameItemButtonTemplate` and its click handler, which can differ between client builds. No part of the module has been checked against the SDD tests yet beyond the human's use of the old addon.
+
+## 7.6 Module: Layers
+
+The sixth module, and for now a probe. WoW Forever moves players between layers (the client calls them shards) and shows a notice about five minutes before a forced change. The human wants the warning to be more obvious. No event, frame or call for it is documented, so this version only watches and records what the game does around the warning. A module that makes the warning obvious comes after the probe has shown what is available (D-033).
+
+- **LAY-01** The module is registered as `Layers` with no `classes` field (MOD-06). It is off for watching until `/ggg layers probe on`, and then it watches at every login.
+- **LAY-02** The probe reads and never writes to Blizzard frames (INV-02, D-029). It registers for all game events and logs each event with its text. For the first 20 seconds it only learns which events are everyday noise and mutes any seen four or more times. Later an event seen more than 30 times in a window of 10 seconds is muted, and a list of noisy name prefixes is skipped. Events and text that hold the words refresh, layer, phase or shard (the word "player" is removed before matching) always show and are always kept.
+- **LAY-03** Once a second the probe scans Blizzard's frames for ones that became visible and logs their names, parents and texts, with a cap on lines per frame. A frame whose name matches the keywords is watched and its text changes are logged, up to 20 lines, to catch a countdown.
+- **LAY-04** The probe hooks, after the fact, the start function, show and hide of the game's warning frame `ShardTransferImminentFrame` and its minimize button (`hooksecurefunc` and `HookScript` only). The frame, its texts (`SHARD_TRANSFER_COUNTDOWN_MESSAGE` and related strings) and the event `SHARD_TRANSFER`, which fires after a layer change, were found with this probe. What starts the five minute warning, and whether its countdown can be read, are not known yet.
+- **LAY-05** The log keeps the last 500 lines and a second list of the 300 most important lines (keyword matches and notes), saved with the character, so busy chat cannot push the warning out. Commands: `/ggg layers probe on|off`, `note [text]` (a marker in the log), `log [n|keep|<word>]`, `clear`, `find [word]` (search the game's global names and `C_` APIs for layer words) and `inspect` (describe the warning frame).
+- **LAY-06** `C_PlayerInteractionManager.ShardTransferConfirm` is never called by the addon, because it may move the player.
+
+**Saved data** (`ns.db.modules.Layers`): `{ enabled = true, armed = false, log = {}, keep = {} }`.
+
+**Known limitations.** The probe has not yet seen a real five minute warning, so the module that shows a banner, a sound and a countdown is not designed. Behaviour in combat is unknown.
+
+---
+
 # 8. Slash commands
 
-- **CMD-01** `/ggg` and `/gggui` are the only slash commands the addon registers.
+- **CMD-01** `/ggg` and `/gggui` are the slash commands the addon registers, plus `/bb` and `/bagbuddy` as short forms of `/ggg bags` (BAG-09).
 - **CMD-02** With no argument or `help`, the command prints the version and the command list.
 - **CMD-03** `/ggg modules` lists registered modules and whether each is on.
 - **CMD-04** Unknown input prints one line pointing to `/ggg help`.
@@ -519,6 +563,33 @@ Use these **one at a time**. Each block gives the prompt, the requirements cover
 **Acceptance:** with an attackable target and enemy nameplates on, a small range bar with the shot glow shows under the target's nameplate and follows target changes. It is gone with no target and with `nameplate off`. No taint errors.
 **Demo:** target mobs at different distances, shoot with Auto Shot, change targets, turn it off and on.
 
+## Step 18: Bags module
+
+**Read:** 2, 7.5.
+**Status:** done, awaiting a full check in the game (recorded as step 22 in `docs/PROGRESS.md`).
+**Prompt:** Convert the BagBuddy addon into the `Bags` module in `Modules/Bags/` and keep its behaviour (BAG-01 to BAG-10). Import its saved settings once from `BagBuddyDB`. Add the files and `BagBuddyDB` to the `.toc`.
+**Covers:** BAG-01 to BAG-10.
+**Acceptance:** with the BagBuddy addon off, the bag keys open the combined window, also in combat. The pinned items, sell list and hidden bags from BagBuddy are still there. Junk sells at a vendor. `/ggg bags` and `/bb` work. No errors.
+**Demo:** restart the game, open the bags, pin an item, mark one for sale, visit a vendor, and press the bag key in combat.
+
+## Step 19: Player area rework
+
+**Read:** 2, 7.1 (CLU-06, CLU-19, CLU-26), 7.2 (HUN-11, HUN-12, HUN-15, HUN-17, HUN-18, HUN-19), 7.3 (CMP-13, CMP-14).
+**Status:** done, awaiting a check in the game (recorded as steps 17 to 21 in `docs/PROGRESS.md`).
+**Prompt:** Move the range bar and shot glow to the nameplate only, put the essential cooldowns in one full-width row, move the ammo block beside Feign Death, add the player cast bar under the power bar and move the Hunter parts down to fit.
+**Covers:** CLU-26, HUN-11, HUN-12, HUN-17, HUN-18, HUN-19, CLU-19.
+**Acceptance:** the player area shows the unit frame, the cast bar, the cooldown row and the three button rows with the ammo block and Feign Death at the right. The nameplate bar sits under the cast bar and does not get covered. The cluster fits its container. No errors.
+**Demo:** `/reload`, cast a spell and a channel, shoot Auto Shot at a target, check the nameplate bar while the target casts.
+
+## Step 20: Layers probe
+
+**Read:** 2, 7.6.
+**Status:** done, in use (recorded as step 18 in `docs/PROGRESS.md`).
+**Prompt:** Add the `Layers` module in `Modules/Layers/Probe.lua` with the event and frame probe and its commands (LAY-01 to LAY-06). Add the file to the `.toc`.
+**Covers:** LAY-01 to LAY-06.
+**Acceptance:** with the probe on, a layer change and a warning leave lines in `/ggg layers log` and `/ggg layers log keep`. No errors and no taint.
+**Demo:** `/ggg layers probe on`, play until a warning shows, then `/ggg layers note warning is showing` and `/ggg layers log keep`.
+
 ## Step 9 onward
 
 Not defined in detail. Candidates: the party frames (postponed by the human until they have a group), dragging actions onto the new bars, paging for bar 1, and key bindings on the new buttons. Each step is written after the previous one has been tested in the game.
@@ -567,7 +638,7 @@ For the shell and for every later feature:
 - A slash sub-command registration helper (MOD-05, CMD-05).
 - Profiles (per character, per spec) layered over `ns.db.modules` without changing module code.
 - A settings window module that reads each module's declared options.
-- Folding the remaining personal addons (BagBuddy, FriendBook) in as modules, one at a time, each with a migration of its old saved data. HunterKit was folded in as the Hunter module (section 7.2).
+- Folding the remaining personal addons (FriendBook) in as modules, one at a time, each with a migration of its old saved data. HunterKit was folded in as the Hunter module (section 7.2) and BagBuddy as the Bags module (section 7.5).
 - A template system: a base template for all classes plus class-specific templates (SCP-06), built on the `classes` field (MOD-06).
 - Later, if wanted: a user-movable layout, an edit mode, a grid, third-party wrappers and modules as separate addons (SCP-25). None of these are designed.
 - Splitting Cluster into one module per part if it grows too large (D-011).
