@@ -512,6 +512,13 @@ local function BuildFrame()
         end)
     end
 
+    -- Opens the read only memory of the bank (Bank.lua).
+    local bankButton = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
+    bankButton:SetSize(56, 20)
+    bankButton:SetPoint("TOPLEFT", frame, "TOPLEFT", 14, -10)
+    bankButton:SetText("Bank")
+    bankButton:SetScript("OnClick", function() Bags.Bank:Toggle() end)
+
     -- Opens the window where you choose what each bag holds.
     local filterButton = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
     filterButton:SetSize(64, 22)

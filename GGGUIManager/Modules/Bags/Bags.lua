@@ -149,6 +149,7 @@ function Bags:Enable()
     if Bags.blocked or Bags.active then return end
     Bags.active = true
     Bags:Start() -- builds the window and takes over the bag keys (Window.lua)
+    Bags.Bank:Start() -- remembers the bank while it is open (Bank.lua)
 
     local events = CreateFrame("Frame")
     events:RegisterEvent("PLAYER_ENTERING_WORLD")
@@ -203,6 +204,10 @@ local function HandleCommand(msg)
     elseif msg:match("^mark%s+") then
         -- mark [shift-click an item], or an item ID. Do it again to unmark.
         Bags.SellList:Toggle(Bags.SellList:ItemIDFromText(msg:match("^mark%s+(.+)")))
+    elseif msg == "bank" then
+        Bags.Bank:Toggle()
+    elseif msg == "bank probe" then
+        Bags.Bank:Probe()
     elseif msg == "junk" then
         ListJunk()
     elseif msg == "sell" then
@@ -219,6 +224,7 @@ local function HandleCommand(msg)
         print("  /ggg bags pin [item]   pin an item (shift-click it, or give its ID)")
         print("  /ggg bags selllist   choose items to sell at vendors (also Ctrl + Alt + click an item)")
         print("  /ggg bags mark [item]   mark or unmark an item for sale")
+        print("  /ggg bags bank   open the read only memory of your bank (/ggg bags bank probe checks what was found)")
         print("  /ggg bags junk   list grey items in your bags")
         print("  /ggg bags sell   toggle auto-selling junk at vendors")
         print("  /ggg bags reset   put the bag window back in the default spot")
