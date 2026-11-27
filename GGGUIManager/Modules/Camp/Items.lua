@@ -128,6 +128,9 @@ function Items.Special(entry)
         if Items.HEARTHSTONE_NAMES[lower] then return "hearthstone" end
         if Items.BAG_NAMES[lower] then return "bag" end
         if campsiteByName[lower] then return "campsite", campsiteByName[lower] end
+        -- The item that places an object can carry the name with "Kit" on the end ("Journeyman Campfire Kit").
+        local bare = lower:match("^(.-)%s+kit$")
+        if bare and campsiteByName[bare] then return "campsite", campsiteByName[bare] end
     end
     local _, spellID = Items.UseSpell(entry.id)
     if spellID and campsiteBySpell[spellID] then return "campsite", campsiteBySpell[spellID] end

@@ -110,6 +110,19 @@ local function Build(container, rect)
         end)
         button:SetScript("OnLeave", function() GameTooltip:Hide() end)
 
+        -- Dragging as on the game's own pet bar (PetActionButtonMixin): pick the ability up when the bars are
+        -- unlocked or the pickup key (Shift by default) is held, and drop a carried pet ability back onto a slot.
+        button:RegisterForDrag("LeftButton", "RightButton")
+        button:SetScript("OnDragStart", function(self)
+            local locked = Cluster.BarsLocked and Cluster.BarsLocked()
+            if not locked or IsModifiedClick("PICKUPACTION") then
+                if PickupPetAction then PickupPetAction(self:GetID()) end
+            end
+        end)
+        button:SetScript("OnReceiveDrag", function(self)
+            if GetCursorInfo() == "petaction" and PickupPetAction then PickupPetAction(self:GetID()) end
+        end)
+
         buttons[i] = button
     end
 

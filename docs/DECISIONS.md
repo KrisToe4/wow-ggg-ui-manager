@@ -271,3 +271,13 @@ Addendum to D-028 (2026-11-21): the focus button's `unit` attribute is `none`, n
 - **Requirement IDs affected:** BAG-04, BAG-09, and new BAG-11 to BAG-15 recommended
 
 Addendum to D-038 (2026-11-25): the first probe in game showed bag -1 is the 32 slot keyring, not bank storage, so it is not scanned. The bank is bag 6 plus the bank bags after it, and no account bank exists in this client. The remembered window uses 8 columns to match the game's own bank window.
+
+## D-039 Cluster action bar buttons use the game's own drag rule
+
+The buttons call `PickupAction` and `PlaceAction` from plain `OnDragStart` and `OnReceiveDrag` scripts, as the game's own bars do (Blizzard `ActionBarActionButtonMixin`). The rule is: pick up when the Lock Action Bars setting is off or the pickup modified click (Shift) is held. The lock is read from `Settings.GetValue("lockActionBars")` inside a pcall, with the console variable as a fallback. Nothing of the game's own bars is written to.
+
+The pet bar uses the same rule through `Cluster.BarsLocked` and `PickupPetAction`, as the game's `PetActionButtonMixin` does.
+
+## D-040 The bag window is not listed in UISpecialFrames, a stand-in frame is
+
+The game's panel code hides every frame named in `UISpecialFrames` when another panel opens or Escape is pressed. The bag window is protected (it holds secure item buttons), and a hide of it from that code is blocked in combat and logged as `ADDON_ACTION_BLOCKED`, because our write to the list taints the entry. A plain unprotected frame, `GGGUIManagerBagsEscape`, is listed instead. It is shown and hidden with the bag window, and when the game hides it the bag window is hidden too, only out of combat. In combat Escape passes on to the game menu and the close button still works. The remembered bank window is plain, so it stays listed directly.

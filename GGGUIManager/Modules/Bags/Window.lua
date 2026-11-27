@@ -469,8 +469,19 @@ local function BuildFrame()
         Bags:UpdateBackpackIndicator()
     end)
 
-    -- Escape closes the window like other panels.
-    tinsert(UISpecialFrames, "GGGUIManagerBagsFrame")
+    -- Escape closes the window like other panels. The protected window itself must not be in UISpecialFrames: the
+    -- game hides everything in that list from other panels' code (opening talents, for example), and in combat
+    -- that hide of a protected window is blocked and logged as an addon error. A plain stand-in frame is listed
+    -- instead. It is shown while the window is, and when the game hides it the window is hidden too, out of combat.
+    -- In combat the close button still works, and Escape simply passes on to the game menu.
+    local escape = CreateFrame("Frame", "GGGUIManagerBagsEscape", UIParent)
+    escape:Hide()
+    escape:SetScript("OnHide", function()
+        if frame:IsShown() and not InCombatLockdown() then frame:Hide() end
+    end)
+    tinsert(UISpecialFrames, "GGGUIManagerBagsEscape")
+    frame:HookScript("OnShow", function() escape:Show() end)
+    frame:HookScript("OnHide", function() escape:Hide() end)
 
     local title = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     title:SetPoint("TOP", frame, "TOP", 0, -14)

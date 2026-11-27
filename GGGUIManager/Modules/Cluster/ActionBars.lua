@@ -34,6 +34,16 @@ local IsInRange = Api("IsActionInRange")
 local GetCooldown = Api("GetActionCooldown")
 local GetCooldownDuration = C_ActionBar and C_ActionBar.GetActionCooldownDuration
 
+-- The game's "Lock Action Bars" option. The setting lives in the Settings table in this client, and in a console
+-- variable in older ones.
+local function BarsLocked()
+    if Settings and Settings.GetValue then
+        local ok, value = pcall(Settings.GetValue, "lockActionBars")
+        if ok and value ~= nil then return value and true or false end
+    end
+    return GetCVar and GetCVar("lockActionBars") == "1"
+end
+Cluster.BarsLocked = BarsLocked -- the pet bar uses the same rule (PetBar.lua)
 local allButtons = {}
 local failedOnce = false
 local driverBuilt = false
@@ -232,6 +242,20 @@ local function BuildBar(bar, container, rect)
             if not pcall(GameTooltip.SetAction, GameTooltip, self.slot) then GameTooltip:Hide() end
         end)
         button:SetScript("OnLeave", function() GameTooltip:Hide() end)
+
+        -- Dragging works as on the game's own bars (see ActionBarActionButtonMixin:OnDragStart): an action is
+        -- picked up when the bars are unlocked or the pickup key (Shift by default) is held, and dropped
+        -- onto a button with PlaceAction.
+        button:RegisterForDrag("LeftButton", "RightButton")
+        button:SetScript("OnDragStart", function(self)
+            if not BarsLocked() or IsModifiedClick("PICKUPACTION") then
+                if PickupAction then PickupAction(self.slot) end
+                if SpellFlyout and SpellFlyout.Hide then SpellFlyout:Hide() end
+            end
+        end)
+        button:SetScript("OnReceiveDrag", function(self)
+            if PlaceAction then PlaceAction(self.slot) end
+        end)
 
         allButtons[#allButtons + 1] = button
         UpdateAll(button)
